@@ -17,6 +17,7 @@ It also includes massive Quality-of-Life (QoL) features for accessing portable s
 ---
 
 ## ✨ Features ✨
+*TODO: Short mod showcase vid, images.*
 
 ### 💻 Unified User Interface
 
