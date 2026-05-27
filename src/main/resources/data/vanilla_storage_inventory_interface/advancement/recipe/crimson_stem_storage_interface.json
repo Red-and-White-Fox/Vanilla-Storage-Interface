@@ -1,0 +1,1 @@
+{"parent":"minecraft:recipes/root","criteria":{"has_item":{"trigger":"minecraft:inventory_changed","conditions":{"items":[{"items":"vanilla_storage_interface:crimson_stem_storage_frame"}]}}},"rewards":{"recipes":["vanilla_storage_interface:crimson_stem_storage_interface"]}}

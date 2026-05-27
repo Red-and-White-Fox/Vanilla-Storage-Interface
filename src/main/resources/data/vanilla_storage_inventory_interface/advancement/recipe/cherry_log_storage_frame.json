@@ -1,0 +1,1 @@
+{"parent":"minecraft:recipes/root","criteria":{"has_item":{"trigger":"minecraft:inventory_changed","conditions":{"items":[{"items":"minecraft:cherry_log"}]}}},"rewards":{"recipes":["vanilla_storage_interface:cherry_log_storage_frame"]}}

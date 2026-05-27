@@ -1,0 +1,1 @@
+{"parent":"minecraft:recipes/root","criteria":{"has_item":{"trigger":"minecraft:inventory_changed","conditions":{"items":[{"items":"minecraft:warped_planks"}]}}},"rewards":{"recipes":["vanilla_storage_interface:warped_storage_frame"]}}

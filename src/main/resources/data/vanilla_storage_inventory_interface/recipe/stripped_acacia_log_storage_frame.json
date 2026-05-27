@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SSS",
+    "S S",
+    "SSS"
+  ],
+  "key": {
+    "S": { "item": "minecraft:stripped_acacia_log" }
+  },
+  "result": {
+    "id": "vanilla_storage_interface:stripped_acacia_log_storage_frame",
+    "count": 16
+  }
+}

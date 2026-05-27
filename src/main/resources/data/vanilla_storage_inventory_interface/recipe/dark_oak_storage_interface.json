@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "minecraft:glass_pane" },
+    { "item": "minecraft:redstone" },
+    { "item": "vanilla_storage_interface:dark_oak_storage_frame" }
+  ],
+  "result": {
+    "id": "vanilla_storage_interface:dark_oak_storage_interface",
+    "count": 1
+  }
+}

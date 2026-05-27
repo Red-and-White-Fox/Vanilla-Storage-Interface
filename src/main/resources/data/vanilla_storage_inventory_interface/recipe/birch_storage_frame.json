@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " p ",
+    "p p",
+    " p "
+  ],
+  "key": {
+    "p": { "item": "minecraft:birch_planks" }
+  },
+  "result": {
+    "id": "vanilla_storage_interface:birch_storage_frame",
+    "count": 2
+  }
+}

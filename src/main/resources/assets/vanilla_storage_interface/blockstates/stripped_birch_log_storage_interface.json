@@ -1,0 +1,96 @@
+{
+  "variants": {
+    "facing=north,illuminated=true,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface"
+    },
+    "facing=north,illuminated=false,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface"
+    },
+    "facing=north,illuminated=true,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered"
+    },
+    "facing=north,illuminated=false,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered"
+    },
+    "facing=east,illuminated=true,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface",
+      "y": 90
+    },
+    "facing=east,illuminated=false,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface",
+      "y": 90
+    },
+    "facing=east,illuminated=true,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "y": 90
+    },
+    "facing=east,illuminated=false,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "y": 90
+    },
+    "facing=south,illuminated=true,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface",
+      "y": 180
+    },
+    "facing=south,illuminated=false,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface",
+      "y": 180
+    },
+    "facing=south,illuminated=true,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "y": 180
+    },
+    "facing=south,illuminated=false,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "y": 180
+    },
+    "facing=west,illuminated=true,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface",
+      "y": 270
+    },
+    "facing=west,illuminated=false,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface",
+      "y": 270
+    },
+    "facing=west,illuminated=true,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "y": 270
+    },
+    "facing=west,illuminated=false,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "y": 270
+    },
+    "facing=up,illuminated=true,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "x": -90
+    },
+    "facing=up,illuminated=false,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "x": -90
+    },
+    "facing=up,illuminated=true,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "x": -90
+    },
+    "facing=up,illuminated=false,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "x": -90
+    },
+    "facing=down,illuminated=true,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "x": 90
+    },
+    "facing=down,illuminated=false,on_chest=true": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "x": 90
+    },
+    "facing=down,illuminated=true,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "x": 90
+    },
+    "facing=down,illuminated=false,on_chest=false": {
+      "model": "vanilla_storage_interface:block/stripped_birch_log_storage_interface_centered",
+      "x": 90
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "vanilla_storage_interface:item/bamboo_block_storage_frame"
+  }
+}

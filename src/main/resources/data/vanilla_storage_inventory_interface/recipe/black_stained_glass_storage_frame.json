@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ggg",
+    "g g",
+    "ggg"
+  ],
+  "key": {
+    "g": {
+      "item": "minecraft:black_stained_glass_pane"
+    }
+  },
+  "result": {
+    "id": "vanilla_storage_interface:black_stained_glass_storage_frame",
+    "count": 2
+  }
+}

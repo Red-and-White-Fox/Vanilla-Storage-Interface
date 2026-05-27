@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SSS",
+    "S S",
+    "SSS"
+  ],
+  "key": {
+    "S": { "item": "minecraft:stripped_dark_oak_log" }
+  },
+  "result": {
+    "id": "vanilla_storage_interface:stripped_dark_oak_log_storage_frame",
+    "count": 16
+  }
+}

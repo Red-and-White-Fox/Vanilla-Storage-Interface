@@ -1,0 +1,1 @@
+{"parent":"minecraft:recipes/root","criteria":{"has_item":{"trigger":"minecraft:inventory_changed","conditions":{"items":[{"items":"minecraft:oak_planks"}]}}},"rewards":{"recipes":["vanilla_storage_interface:oak_storage_frame"]}}

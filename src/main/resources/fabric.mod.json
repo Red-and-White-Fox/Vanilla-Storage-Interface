@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "vanilla_storage_interface",
+  "version": "${version}",
+  "name": "Vanilla Storage Interface",
+  "description": "A searchable interface for your item storage - Chests, Shulker Boxes, Ender Chest and even the Player Inventory. Also allows you to open your Ender Chest or Shulker Box without placing then down!",
+  "authors": [
+    "Svemoćan"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Svemocan/Vanilla-Storage-Interface-Mod",
+    "sources": "https://github.com/Svemocan/Vanilla-Storage-Interface-Mod",
+    "issues": "https://github.com/Svemocan/Vanilla-Storage-Interface-Mod/issues"
+  },
+  "license": "GPL-3.0",
+  "icon": "assets/vanilla_storage_interface/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "svemocan.VanillaStorageInterface"
+    ],
+    "client": [
+      "svemocan.client.VanillaStorageInterfaceClient"
+    ],
+    "modmenu": [
+      "svemocan.vanilla_storage_interface.config.ModMenuIntegration"
+    ],
+    "rei_client": [
+      "svemocan.vanilla_storage_interface.rei.VanillaStorageREIClientPlugin"
+    ]
+  },
+  "mixins": [
+    "vanilla-storage-interface.mixins.json",
+    {
+      "config": "vanilla-storage-interface.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "cloth-config": ">=15.0.0"
+  },
+  "suggests": {
+    "modmenu": ">=11.0.0"
+  }
+}

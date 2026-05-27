@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LLL",
+    "L L",
+    "LLL"
+  ],
+  "key": {
+    "L": { "item": "minecraft:crimson_stem" }
+  },
+  "result": {
+    "id": "vanilla_storage_interface:crimson_stem_storage_frame",
+    "count": 16
+  }
+}
