@@ -29,7 +29,10 @@ Interacting with a Storage Interface opens a custom terminal tailored for bulk a
 * **Dynamic Quantities:** Displays compact, easy-to-read numbers (like `1.5k`) for stacks exceeding 64.
 * **Live External Syncing:** The terminal actively listens to its connected physical inventory. If a Hopper injects an item or another player takes something out, your open terminal updates in real-time.
 
-![interface_preview.png](images/storageinterfacepreview.png)
+<p align="center">
+  <img src="images/storageinterfacepreview.png" alt="interface_preview.png" />
+</p>
+
 
 ### ![ender_chest.png](images/ender_chest.png) Portable Terminals (Void, Player & Shulker)
 
