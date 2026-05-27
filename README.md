@@ -1,5 +1,5 @@
 # Vanilla Storage Interface Mod
-![banner.png](src/main/resources/assets/vanilla_storage_interface/banner.png)
+![banner.png](images/banner.png)
 
 **A sleek, Vanilla-oriented storage terminal mod for Minecraft 1.21 (Fabric).**
 
@@ -28,7 +28,7 @@ Interacting with a Storage Interface opens a custom terminal tailored for bulk a
 * **Dynamic Quantities:** Displays compact, easy-to-read numbers (like `1.5k`) for stacks exceeding 64.
 * **Live External Syncing:** The terminal actively listens to its connected physical inventory. If a Hopper injects an item or another player takes something out, your open terminal updates in real-time.
 
-### ![ender_chest.png](src/main/resources/assets/vanilla_storage_interface/ender_chest.png) Portable Terminals (Void, Player & Shulker)
+### ![ender_chest.png](images/ender_chest.png) Portable Terminals (Void, Player & Shulker)
 
 Access your storage on the go without placing blocks down! *(Can be toggled in settings).*
 
@@ -74,7 +74,7 @@ Fully integrated support for mods that increase Shulker Box stack sizes (like Ca
 * `Shift-Click (From Inventory)`: Insert items.
 * `Shift + Double-Click`: Quick-move ALL matching items from your inventory into the terminal.
 
-### ⌨️ Seamless IPN Integration (Inventory Profiles Next)
+### ⌨️ Native IPN-like Item Movement Features ([Inventory Profiles Next](https://modrinth.com/mod/inventory-profiles-next))
 
 If you have IPN installed, the mod dynamically reads your `inventoryprofiles.json` configuration and mimics your **"Move All Items"** action. Whether you use a modifier + click (like `Space + Left Click`) or a pure keyboard chord (like `Left Alt + B`), your muscle memory will work perfectly inside the Virtual Terminal!
 
@@ -116,8 +116,8 @@ Place the `.jar` into your `.minecraft/mods` folder and launch the game. That's 
 
 | Mod Name | Version | Why? |
 | --- | --- | --- |
-| **[ModMenu](https://modrinth.com/mod/modmenu)** | >= 11.0.0 | Required for the settings page. |
-| **[Cloth Config API](https://modrinth.com/mod/cloth-config)** | >= 15.0.0 | Required for the settings page. |
+| **[ModMenu](https://modrinth.com/mod/modmenu)** | >= 11.0.0 | Required for the settings page. Not needed on the server, just the client. |
+| **[Cloth Config API](https://modrinth.com/mod/cloth-config)** | >= 15.0.0 | Required for the settings page. Needed on the server and the client. |
 
 ---
 
