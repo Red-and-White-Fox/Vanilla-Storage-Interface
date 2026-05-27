@@ -118,7 +118,7 @@ Place the `.jar` into your `.minecraft/mods` folder and launch the game. That's 
 | Name | Version |
 | --- | --- |
 | **Minecraft** | 1.21.1 |
-| **[Fabric Loader](https://fabricmc.net)** | >= 0.19.2 |
+| **[Fabric Loader](https://fabricmc.net)** | >= 0.16.14 |
 | **[Fabric API](https://modrinth.com/mod/fabric-api)** | * |
 
 **Dependencies:**
