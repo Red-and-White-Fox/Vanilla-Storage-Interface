@@ -1,5 +1,8 @@
 # Vanilla Storage Interface Mod
-![banner.png](images/banner.png)
+
+<p align="center">
+  <img src="images/icon.png" alt="icon.png" />
+</p>
 
 **A sleek, Vanilla-oriented storage terminal mod for Minecraft 1.21 (Fabric).**
 
