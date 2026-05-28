@@ -4,7 +4,8 @@
   <img src="images/icon.png" alt="icon.png" />
 </p>
 
-**A sleek, Vanilla-oriented storage terminal mod for Minecraft 1.21 (Fabric).**
+**A sleek, Vanilla-oriented storage terminal mod for Minecraft 1.21.1 (Fabric).**
+If you wish to have this mod ported to a newer/older version of the game, or see new block variants or features added, do let me know in the [Discussions](https://github.com/Red-and-White-Fox/Vanilla-Storage-Interface/discussions) section :).
 
 ### So you ask *why*?
 
