@@ -8,6 +8,13 @@ import svemocan.VanillaStorageInterface;
 @Config(name = VanillaStorageInterface.MOD_ID)
 public class VanillaStorageConfig implements ConfigData {
 
+    public enum DefragSortMode {
+        ALPHABETICAL,
+        QUANTITY_DESCENDING,
+        QUANTITY_ASCENDING,
+        REGISTRY_ID
+    }
+
     @ConfigEntry.Category("void_storage")
     @ConfigEntry.Gui.Tooltip
     public boolean enableVoidTerminal = true;
@@ -36,6 +43,10 @@ public class VanillaStorageConfig implements ConfigData {
     @ConfigEntry.Gui.Tooltip
     public boolean autoFocusSearchBar = true;
 
+    @ConfigEntry.Category("controls")
+    @ConfigEntry.Gui.Tooltip
+    public boolean ipnHasPriorityOverAutoFocus = true;
+
     @ConfigEntry.Category("misc")
     @ConfigEntry.Gui.Tooltip
     public boolean syncSearchWithREI = false;
@@ -52,7 +63,11 @@ public class VanillaStorageConfig implements ConfigData {
     @ConfigEntry.Gui.Tooltip
     public boolean enableIlluminatedInterfaces = true;
 
-    // Invisible to GUI, but saves to JSON automatically
+    @ConfigEntry.Category("misc")
+    @ConfigEntry.Gui.Tooltip
+    @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
+    public DefragSortMode defragmentationSortMode = DefragSortMode.ALPHABETICAL;
+
     @ConfigEntry.Category("misc")
     @ConfigEntry.Gui.Excluded
     public int lastSortMode = 0;

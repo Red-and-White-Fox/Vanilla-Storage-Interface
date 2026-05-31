@@ -4,6 +4,7 @@ import me.shedaniel.autoconfig.AutoConfig;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import svemocan.VanillaStorageInterface;
 import svemocan.client.VanillaStorageInterfaceClient;
+import svemocan.vanilla_storage_interface.compat.IpnCompatWrapper;
 import svemocan.vanilla_storage_interface.config.VanillaStorageConfig;
 import svemocan.vanilla_storage_interface.network.StorageActionPayload;
 import net.minecraft.client.gui.screen.Screen;
@@ -24,13 +25,8 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     private static final Identifier TEXTURE = Identifier.of(VanillaStorageInterface.MOD_ID, "textures/gui/storage_interface.png");
     private static final Identifier TEXTURE_VIRTUAL = Identifier.of(VanillaStorageInterface.MOD_ID, "textures/gui/void_terminal_interface.png");
 
-    // Cached IPN Hotkey Data
-    private static long lastIpnConfigModifyTime = 0L;
-    private static final IpnHotkey cachedMoveAllHotkey = new IpnHotkey();
-    private IpnHotkey moveAllHotkey = new IpnHotkey();
-
-    // Swipe-to-Move Tracker
     private int lastSwipedSlotId = -1;
+    private long pauseSortingTime = 0;
 
     private int emptyShulkerSlots = 0;
     private final int titleColor;
@@ -48,82 +44,13 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     private SortMode currentSortMode = SortMode.NONE;
 
     private int ghostX, ghostY;
-
-    // OPTIMIZATION: Cache the BlockEntity reference, not the ItemStack!
     private svemocan.vanilla_storage_interface.StorageInterfaceBlockEntity cachedInterfaceEntity = null;
 
     private long lastShiftClickTime = 0;
     private int lastShiftClickedSlotId = -1;
     private ItemStack lastShiftClickedStack = ItemStack.EMPTY;
 
-    // --- INNER CLASS: HOTKEY TRACKER ---
-    public static class IpnHotkey {
-        public final List<Integer> keyboardModifiers = new ArrayList<>();
-        private int triggerKey = -1;
-        private int triggerMouse = -1;
-
-        // Fallback constructor (Defaults to Space + Left Click)
-        public IpnHotkey() {
-            this.keyboardModifiers.add(GLFW.GLFW_KEY_SPACE);
-            this.triggerMouse = 0;
-        }
-
-        public void parseFromIpn(String ipnKeys) {
-            this.keyboardModifiers.clear();
-            this.triggerKey = -1;
-            this.triggerMouse = -1;
-
-            String[] parts = ipnKeys.split(",");
-            for (int i = 0; i < parts.length; i++) {
-                String k = parts[i].trim().toUpperCase();
-                boolean isLast = (i == parts.length - 1);
-
-                if (k.startsWith("BUTTON_")) {
-                    try {
-                        int btn = Integer.parseInt(k.replace("BUTTON_", "")) - 1;
-                        if (isLast) this.triggerMouse = btn;
-                    } catch (NumberFormatException ignored) {}
-                } else {
-                    int glfwKey = mapToGlfw(k);
-                    if (glfwKey != -1) {
-                        if (isLast) this.triggerKey = glfwKey;
-                        else this.keyboardModifiers.add(glfwKey);
-                    }
-                }
-            }
-        }
-
-        public boolean areModifiersHeld(long windowHandle) {
-            for (int key : keyboardModifiers) {
-                if (key == -1) continue;
-                if (!net.minecraft.client.util.InputUtil.isKeyPressed(windowHandle, key)) return false;
-            }
-            return true;
-        }
-
-        public boolean triggersOnMouse(int mouseButton) { return this.triggerMouse == mouseButton; }
-        public boolean triggersOnKey(int keyCode) { return this.triggerKey == keyCode; }
-
-        private int mapToGlfw(String key) {
-            return switch (key) {
-                case "LEFT_ALT" -> GLFW.GLFW_KEY_LEFT_ALT;
-                case "RIGHT_ALT" -> GLFW.GLFW_KEY_RIGHT_ALT;
-                case "LEFT_CONTROL" -> GLFW.GLFW_KEY_LEFT_CONTROL;
-                case "RIGHT_CONTROL" -> GLFW.GLFW_KEY_RIGHT_CONTROL;
-                case "LEFT_SHIFT" -> GLFW.GLFW_KEY_LEFT_SHIFT;
-                case "RIGHT_SHIFT" -> GLFW.GLFW_KEY_RIGHT_SHIFT;
-                case "CAPS_LOCK" -> GLFW.GLFW_KEY_CAPS_LOCK;
-                case "SPACE" -> GLFW.GLFW_KEY_SPACE;
-                default -> {
-                    if (key.length() == 1 && key.charAt(0) >= 'A' && key.charAt(0) <= 'Z') {
-                        yield GLFW.GLFW_KEY_A + (key.charAt(0) - 'A');
-                    }
-                    yield -1;
-                }
-            };
-        }
-    }
-    // -----------------------------------
+    private boolean interceptDropKeyChar = false;
 
     public StorageInterfaceScreen(StorageInterfaceScreenHandler handler, PlayerInventory inventory, Text title) {
         super(handler, inventory, title);
@@ -150,13 +77,20 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     }
 
     private ItemStack getGhostSlotItem() {
-        if (this.cachedInterfaceEntity != null) {
-            return this.cachedInterfaceEntity.getDisplayItem();
-        }
+        if (this.cachedInterfaceEntity != null) return this.cachedInterfaceEntity.getDisplayItem();
         return ItemStack.EMPTY;
     }
 
     private boolean isVirtualTerminal() { return this.isVirtual; }
+
+    @Override
+    public void handledScreenTick() {
+        super.handledScreenTick();
+        if (this.pauseSortingTime > 0 && net.minecraft.util.Util.getMeasuringTimeMs() >= this.pauseSortingTime) {
+            this.pauseSortingTime = 0;
+            this.refresh();
+        }
+    }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -199,8 +133,10 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
             return true;
         }
 
-        long handle = this.client.getWindow().getHandle();
-        boolean isMoveAllMouse = this.moveAllHotkey.triggersOnMouse(button) && this.moveAllHotkey.areModifiersHeld(handle);
+        if (button == IpnCompatWrapper.triggerMouse && IpnCompatWrapper.triggerMouse != -1) {
+            executeIpnAction(mouseX, mouseY);
+            return true;
+        }
 
         if (this.focusedSlot != null && this.focusedSlot.inventory instanceof PlayerInventory) {
             long time = net.minecraft.util.Util.getMeasuringTimeMs();
@@ -208,17 +144,6 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
             ItemStack cursorStack = this.getScreenHandler().getCursorStack();
             ItemStack hoveredStack = this.focusedSlot.getStack();
-
-            // IPN FEATURE: Move All Matching (Click Item) OR Dump Inventory (Click Empty Slot)
-            if (isMoveAllMouse) {
-                if (!hoveredStack.isEmpty()) {
-                    ClientPlayNetworking.send(new StorageActionPayload("INSERT_ALL_MATCHING", hoveredStack, 0));
-                } else {
-                    net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                    ClientPlayNetworking.send(new StorageActionPayload("DUMP_INVENTORY", ItemStack.EMPTY, 0));
-                }
-                return true;
-            }
 
             if (Screen.hasShiftDown()) {
                 ItemStack targetSync = cursorStack.isEmpty() ? (isDoubleClick ? lastShiftClickedStack : hoveredStack) : cursorStack;
@@ -241,24 +166,10 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         if (button != 0 && button != 1 && button != 2) return super.mouseClicked(mouseX, mouseY, button);
 
         boolean overVirtualGrid = mouseX >= startX + 8 && mouseX < startX + 8 + (COLUMNS * 18) && mouseY >= startY + 36 && mouseY < startY + 36 + (ROWS * 18);
-
         ItemStack cursorStack = this.getScreenHandler().getCursorStack();
         ItemStack hoveredItem = getHoveredVirtualItem(mouseX, mouseY);
 
         if (overVirtualGrid) {
-            // IPN FEATURE: Extract All Matching (Click Item) OR Refill Entire Inventory (Click Empty Space)
-            if (isMoveAllMouse) {
-                if (hoveredItem != null) {
-                    net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                    ClientPlayNetworking.send(new StorageActionPayload("EXTRACT_ALL", hoveredItem, 0));
-                } else {
-                    net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                    ClientPlayNetworking.send(new StorageActionPayload("REFILL_INVENTORY", ItemStack.EMPTY, 0));
-                }
-                return true;
-            }
-
-            // IPN FEATURE: Refill Cursor (Middle Click on an item while holding the same item)
             if (button == 2 && hoveredItem != null && !cursorStack.isEmpty() && ItemStack.areItemsAndComponentsEqual(cursorStack, hoveredItem)) {
                 int needed = cursorStack.getMaxCount() - cursorStack.getCount();
                 if (needed > 0) {
@@ -268,7 +179,6 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                 }
             }
 
-            // Standard Interactions
             if (button == 0 || button == 1) {
                 if (!cursorStack.isEmpty()) {
                     net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
@@ -277,6 +187,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                 } else if (hoveredItem != null) {
                     net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
                     ClientPlayNetworking.send(new StorageActionPayload(Screen.hasShiftDown() ? "SHIFT_EXTRACT" : "EXTRACT", hoveredItem, (button == 0) ? 64 : 1));
+                    this.pauseSortingTime = net.minecraft.util.Util.getMeasuringTimeMs() + 1500;
                     return true;
                 }
             }
@@ -312,6 +223,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                     if (hoveredItem != null) {
                         net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
                         ClientPlayNetworking.send(new StorageActionPayload("SHIFT_EXTRACT", hoveredItem, hasShift ? 64 : 1));
+                        this.pauseSortingTime = net.minecraft.util.Util.getMeasuringTimeMs() + 1500;
                     }
                 }
                 return true;
@@ -354,8 +266,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     @Override
     protected void init() {
         super.init();
-
-        loadIPNConfig();
+        IpnCompatWrapper.updateKeys();
 
         int startX = (this.width - this.backgroundWidth) / 2;
         int startY = (this.height - this.backgroundHeight) / 2;
@@ -367,7 +278,10 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
         this.searchBox = new TextFieldWidget(this.textRenderer, startX + 10, startY + 23, 81, 14, Text.literal("Search..."));
         this.searchBox.setDrawsBackground(false);
-        this.searchBox.setChangedListener(this::updateSearch);
+        this.searchBox.setChangedListener(query -> {
+            this.pauseSortingTime = 0;
+            this.updateSearch(query);
+        });
         this.addDrawableChild(this.searchBox);
 
         this.addDrawableChild(net.minecraft.client.gui.widget.ButtonWidget.builder(Text.literal("9"), btn -> {
@@ -402,7 +316,30 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     }
 
     public void refresh() {
+        if (net.minecraft.util.Util.getMeasuringTimeMs() < this.pauseSortingTime) {
+            for (int i = 0; i < this.filteredItems.size(); i++) {
+                VirtualItem oldItem = this.filteredItems.get(i);
+                int newCount = 0;
+                for (VirtualItem vi : this.virtualItems) {
+                    if (ItemStack.areItemsAndComponentsEqual(vi.stack(), oldItem.stack())) {
+                        newCount = vi.count();
+                        break;
+                    }
+                }
+                this.filteredItems.set(i, new VirtualItem(oldItem.stack(), newCount));
+            }
+            this.filteredItems.removeIf(vi -> vi.count() <= 0);
+            return;
+        }
         if (this.searchBox != null) this.updateSearch(this.searchBox.getText());
+    }
+
+    private String getPrimaryEnchantmentName(ItemStack stack, String defaultName) {
+        net.minecraft.component.type.ItemEnchantmentsComponent enchantments = stack.get(net.minecraft.component.DataComponentTypes.STORED_ENCHANTMENTS);
+        if (enchantments != null && !enchantments.isEmpty()) {
+            return enchantments.getEnchantments().iterator().next().value().description().getString();
+        }
+        return defaultName;
     }
 
     private void updateSearch(String query) {
@@ -413,16 +350,38 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         }
 
         java.util.stream.Stream<VirtualItem> stream = virtualItems.stream()
-                .filter(vi -> vi.stack().getName().getString().toLowerCase().contains(lowerQuery));
+                .filter(vi -> {
+                    String name = vi.stack().getName().getString().toLowerCase();
+                    if (name.contains(lowerQuery)) return true;
+
+                    net.minecraft.component.type.ItemEnchantmentsComponent enchantments = vi.stack().get(net.minecraft.component.DataComponentTypes.STORED_ENCHANTMENTS);
+                    if (enchantments == null) enchantments = vi.stack().get(net.minecraft.component.DataComponentTypes.ENCHANTMENTS);
+
+                    if (enchantments != null) {
+                        for (var entry : enchantments.getEnchantments()) {
+                            String enchName = entry.value().description().getString().toLowerCase();
+                            if (enchName.contains(lowerQuery)) return true;
+                        }
+                    }
+                    return false;
+                });
 
         switch (currentSortMode) {
             case DESC -> stream = stream.sorted((v1, v2) -> Integer.compare(v2.count(), v1.count()));
             case ASC -> stream = stream.sorted((v1, v2) -> Integer.compare(v1.count(), v2.count()));
-            case NAME -> stream = stream.sorted((v1, v2) -> v1.stack().getName().getString().compareToIgnoreCase(v2.stack().getName().getString()));
+            case NAME -> stream = stream.sorted((v1, v2) -> {
+                String n1 = v1.stack().getName().getString();
+                String n2 = v2.stack().getName().getString();
+                if (v1.stack().isOf(net.minecraft.item.Items.ENCHANTED_BOOK) && v2.stack().isOf(net.minecraft.item.Items.ENCHANTED_BOOK)) {
+                    n1 = getPrimaryEnchantmentName(v1.stack(), n1);
+                    n2 = getPrimaryEnchantmentName(v2.stack(), n2);
+                }
+                return n1.compareToIgnoreCase(n2);
+            });
             case NONE -> {}
         }
 
-        this.filteredItems = stream.toList();
+        this.filteredItems = new java.util.ArrayList<>(stream.toList());
         if (!query.isEmpty()) this.scrollOffset = 0;
     }
 
@@ -542,6 +501,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                         this.lastSwipedSlotId = gridId;
                         net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.ITEM_BUNDLE_REMOVE_ONE, 1.0F));
                         ClientPlayNetworking.send(new StorageActionPayload("SHIFT_EXTRACT", hoveredItem, 64));
+                        this.pauseSortingTime = net.minecraft.util.Util.getMeasuringTimeMs() + 1500;
                         return true;
                     }
                 }
@@ -552,73 +512,107 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0) {
-            this.lastSwipedSlotId = -1;
-        }
+        if (button == 0) this.lastSwipedSlotId = -1;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        this.interceptDropKeyChar = false; // Reset tracker
+
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) return super.keyPressed(keyCode, scanCode, modifiers);
 
-        long handle = this.client.getWindow().getHandle();
-
-        // 1. Check if the final IPN trigger key was pressed AND modifiers are held
-        if (this.moveAllHotkey.triggersOnKey(keyCode) && this.moveAllHotkey.areModifiersHeld(handle)) {
-
-            // Translate current mouse pos since keyPressed doesn't provide them
-            double scaledMouseX = this.client.mouse.getX() * (double) this.client.getWindow().getScaledWidth() / (double) this.client.getWindow().getWidth();
-            double scaledMouseY = this.client.mouse.getY() * (double) this.client.getWindow().getScaledHeight() / (double) this.client.getWindow().getHeight();
-
-            // Player Inv Logic
-            if (this.focusedSlot != null && this.focusedSlot.inventory instanceof PlayerInventory) {
-                ItemStack hoveredStack = this.focusedSlot.getStack();
-                if (!hoveredStack.isEmpty()) {
-                    ClientPlayNetworking.send(new StorageActionPayload("INSERT_ALL_MATCHING", hoveredStack, 0));
-                } else {
-                    net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                    ClientPlayNetworking.send(new StorageActionPayload("DUMP_INVENTORY", ItemStack.EMPTY, 0));
-                }
-                return true;
-            }
-
-            // Virtual Grid Logic
-            int startX = (this.width - this.backgroundWidth) / 2;
-            int startY = (this.height - this.backgroundHeight) / 2;
-            boolean overVirtualGrid = scaledMouseX >= startX + 8 && scaledMouseX < startX + 8 + (COLUMNS * 18) && scaledMouseY >= startY + 36 && scaledMouseY < startY + 36 + (ROWS * 18);
-
-            if (overVirtualGrid) {
-                ItemStack hoveredItem = getHoveredVirtualItem(scaledMouseX, scaledMouseY);
-                if (hoveredItem != null) {
-                    net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                    ClientPlayNetworking.send(new StorageActionPayload("EXTRACT_ALL", hoveredItem, 0));
-                } else {
-                    net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                    ClientPlayNetworking.send(new StorageActionPayload("REFILL_INVENTORY", ItemStack.EMPTY, 0));
-                }
-                return true;
-            }
+        if (keyCode == GLFW.GLFW_KEY_S && Screen.hasControlDown()) {
+            boolean fullDefrag = Screen.hasShiftDown();
+            ClientPlayNetworking.send(new StorageActionPayload(fullDefrag ? "DEFRAGMENT_ALL" : "DEFRAGMENT_SHULKERS", ItemStack.EMPTY, 0));
+            net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+            return true;
         }
 
-        // 2. Prevent search box hijacking if an IPN modifier is being held over items
-        if (this.moveAllHotkey.keyboardModifiers.contains(keyCode) && isHoveringOverInventories()) {
-            return false;
+        if (keyCode == IpnCompatWrapper.triggerKey && IpnCompatWrapper.triggerKey != -1) {
+            double scaledMouseX = this.client.mouse.getX() * (double) this.client.getWindow().getScaledWidth() / (double) this.client.getWindow().getWidth();
+            double scaledMouseY = this.client.mouse.getY() * (double) this.client.getWindow().getScaledHeight() / (double) this.client.getWindow().getHeight();
+            executeIpnAction(scaledMouseX, scaledMouseY);
+            return true;
         }
 
         if (this.searchBox.isFocused()) {
             if (this.searchBox.keyPressed(keyCode, scanCode, modifiers)) return true;
             if (this.client.options.inventoryKey.matchesKey(keyCode, scanCode)) return true;
+        } else {
+            if (this.client.options.dropKey.matchesKey(keyCode, scanCode)) {
+                this.interceptDropKeyChar = true; // Tell charTyped to ignore the resulting character
+
+                double scaledMouseX = this.client.mouse.getX() * (double) this.client.getWindow().getScaledWidth() / (double) this.client.getWindow().getWidth();
+                double scaledMouseY = this.client.mouse.getY() * (double) this.client.getWindow().getScaledHeight() / (double) this.client.getWindow().getHeight();
+
+                ItemStack hoveredItem = getHoveredVirtualItem(scaledMouseX, scaledMouseY);
+                if (hoveredItem != null) {
+                    boolean dropEntireStack = Screen.hasControlDown();
+                    ClientPlayNetworking.send(new StorageActionPayload("THROW", hoveredItem, dropEntireStack ? 64 : 1));
+                    return true;
+                }
+            }
         }
+
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private void executeIpnAction(double mouseX, double mouseY) {
+        long handle = this.client.getWindow().getHandle();
+        boolean hasMatchMod = net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.moveMatchMod) && IpnCompatWrapper.moveMatchMod != -1;
+        boolean hasAllMod = net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.moveAllMod) && IpnCompatWrapper.moveAllMod != -1;
+        boolean hasHotbarMod = net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.includeHotbarMod) && IpnCompatWrapper.includeHotbarMod != -1;
+
+        int hotbarFlag = hasHotbarMod ? 1 : 0;
+
+        int startX = (this.width - this.backgroundWidth) / 2;
+        int startY = (this.height - this.backgroundHeight) / 2;
+        boolean isOverVirtual = mouseX >= startX + 8 && mouseX < startX + 8 + (COLUMNS * 18) && mouseY >= startY + 36 && mouseY < startY + 36 + (ROWS * 18);
+        boolean isOverPlayer = this.focusedSlot != null && this.focusedSlot.inventory instanceof PlayerInventory;
+
+        if (hasMatchMod) {
+            if (isOverPlayer && this.focusedSlot.hasStack()) {
+                ClientPlayNetworking.send(new StorageActionPayload("IPN_MOVE_MATCHING_TO_STORAGE", this.focusedSlot.getStack(), hotbarFlag));
+            } else if (isOverVirtual) {
+                ItemStack hoveredItem = getHoveredVirtualItem(mouseX, mouseY);
+                if (hoveredItem != null) {
+                    ClientPlayNetworking.send(new StorageActionPayload("IPN_MOVE_MATCHING_TO_PLAYER", hoveredItem, hotbarFlag));
+                }
+            }
+        } else if (hasAllMod) {
+            if (isOverVirtual) {
+                ClientPlayNetworking.send(new StorageActionPayload("IPN_MOVE_ALL_TO_PLAYER", ItemStack.EMPTY, hotbarFlag));
+            } else {
+                ClientPlayNetworking.send(new StorageActionPayload("IPN_MOVE_ALL_TO_STORAGE", ItemStack.EMPTY, hotbarFlag));
+            }
+        } else {
+            if (isOverVirtual) {
+                ClientPlayNetworking.send(new StorageActionPayload("IPN_REFILL_PLAYER", ItemStack.EMPTY, hotbarFlag));
+            } else {
+                ClientPlayNetworking.send(new StorageActionPayload("IPN_REFILL_STORAGE", ItemStack.EMPTY, hotbarFlag));
+            }
+        }
+        net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
     }
 
     @Override
     public boolean charTyped(char chr, int modifiers) {
-        // Prevent typing characters (like ' ') if that key is part of our IPN hotkey
-        boolean isSpaceTrigger = this.moveAllHotkey.triggersOnKey(GLFW.GLFW_KEY_SPACE) || this.moveAllHotkey.keyboardModifiers.contains(GLFW.GLFW_KEY_SPACE);
-        if (chr == ' ' && isSpaceTrigger && isHoveringOverInventories()) {
-            return false;
+        if (this.interceptDropKeyChar) {
+            this.interceptDropKeyChar = false;
+            if (isHoveringOverInventories()) {
+                return false;
+            }
+        }
+
+        if (VanillaStorageInterface.CONFIG.ipnHasPriorityOverAutoFocus) {
+            long handle = this.client.getWindow().getHandle();
+            if ((IpnCompatWrapper.triggerKey != -1 && net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.triggerKey)) ||
+                    (IpnCompatWrapper.moveAllMod != -1 && net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.moveAllMod)) ||
+                    (IpnCompatWrapper.moveMatchMod != -1 && net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.moveMatchMod)) ||
+                    (IpnCompatWrapper.includeHotbarMod != -1 && net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.includeHotbarMod))) {
+                return false;
+            }
         }
 
         if (VanillaStorageInterface.CONFIG.autoFocusSearchBar) {
@@ -633,6 +627,8 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     }
 
     private boolean isHoveringOverInventories() {
+        if (this.client == null) return false;
+
         double mouseX = this.client.mouse.getX() * (double) this.client.getWindow().getScaledWidth() / (double) this.client.getWindow().getWidth();
         double mouseY = this.client.mouse.getY() * (double) this.client.getWindow().getScaledHeight() / (double) this.client.getWindow().getHeight();
 
@@ -640,42 +636,8 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         int startY = (this.height - this.backgroundHeight) / 2;
 
         boolean overVirtualGrid = mouseX >= startX + 8 && mouseX < startX + 8 + (COLUMNS * 18) && mouseY >= startY + 36 && mouseY < startY + 36 + (ROWS * 18);
-        boolean overPlayerInv = this.focusedSlot != null && this.focusedSlot.inventory instanceof PlayerInventory;
 
-        return overVirtualGrid || overPlayerInv;
-    }
-
-    private void loadIPNConfig() {
-        try {
-            java.nio.file.Path configDir = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir();
-
-            java.nio.file.Path ipnConfig = configDir.resolve("InventoryProfilesNext/inventoryprofiles.json");
-            if (!java.nio.file.Files.exists(ipnConfig)) {
-                ipnConfig = configDir.resolve("inventoryprofiles.json");
-            }
-
-            if (java.nio.file.Files.exists(ipnConfig)) {
-                long currentModifyTime = java.nio.file.Files.getLastModifiedTime(ipnConfig).toMillis();
-
-                if (currentModifyTime > lastIpnConfigModifyTime) {
-                    lastIpnConfigModifyTime = currentModifyTime;
-
-                    String content = java.nio.file.Files.readString(ipnConfig);
-                    com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(content).getAsJsonObject();
-
-                    if (json.has("Hotkeys")) {
-                        com.google.gson.JsonObject hotkeys = json.getAsJsonObject("Hotkeys");
-                        if (hotkeys.has("move_all_items")) {
-                            String keys = hotkeys.getAsJsonObject("move_all_items").getAsJsonObject("main").get("keys").getAsString();
-                            cachedMoveAllHotkey.parseFromIpn(keys);
-                        }
-                    }
-                }
-            }
-            this.moveAllHotkey = cachedMoveAllHotkey;
-
-        } catch (Exception e) {
-            this.moveAllHotkey = new IpnHotkey();
-        }
+        // this.focusedSlot is natively provided by HandledScreen and is only non-null when hovering over a physical slot!
+        return overVirtualGrid || this.focusedSlot != null;
     }
 }

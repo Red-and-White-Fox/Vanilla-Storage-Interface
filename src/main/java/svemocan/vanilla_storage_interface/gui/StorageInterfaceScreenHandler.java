@@ -11,13 +11,12 @@ import svemocan.VanillaStorageInterface;
 public class StorageInterfaceScreenHandler extends ScreenHandler {
 
     private final BlockPos interfacePos;
-    private final int terminalMode; // 0 = Physical Block, 1 = Ender Chest, 2 = Handheld Shulker, 3 = Player Inventory
+    private final int terminalMode;
     private final int shulkerSlot;
     private final net.minecraft.entity.player.PlayerEntity player;
     private int updateTimer = 0;
     private int lastHash = -1;
 
-    // Registry and client-side fallback constructor. Required by Fabric's ScreenHandlerType API.
     public StorageInterfaceScreenHandler(int syncId, PlayerInventory playerInventory) {
         this(syncId, playerInventory, net.minecraft.util.math.BlockPos.ORIGIN, 0, -1);
     }
@@ -33,7 +32,6 @@ public class StorageInterfaceScreenHandler extends ScreenHandler {
         this.shulkerSlot = shulkerSlot;
         this.player = playerInventory.player;
 
-        // Container UI layouts require mapping standard player inventory slots to pixel coordinates
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
                 this.addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 140 + row * 18));
@@ -53,7 +51,6 @@ public class StorageInterfaceScreenHandler extends ScreenHandler {
         super.sendContentUpdates();
 
         if (!this.player.getWorld().isClient) {
-            // Check twice a second (10 ticks) to limit server load during aggressive hopper or automation inputs
             if (this.updateTimer++ % 10 == 0) {
                 net.minecraft.server.network.ServerPlayerEntity serverPlayer = (net.minecraft.server.network.ServerPlayerEntity) this.player;
                 net.minecraft.world.World world = serverPlayer.getServerWorld();
@@ -82,8 +79,6 @@ public class StorageInterfaceScreenHandler extends ScreenHandler {
                 }
 
                 if (vi != null) {
-                    // Custom Delta-Sync Mechanism: Generate a deep content hash based on item IDs, counts, and
-                    // modern component/NBT changes. We only fire a sync payload to the client when a delta is detected.
                     int currentHash = vi.emptyShulkerSlots;
                     for (svemocan.vanilla_storage_interface.network.VirtualItem item : vi.items) {
                         currentHash = currentHash * 31 + net.minecraft.registry.Registries.ITEM.getId(item.stack().getItem()).hashCode();
@@ -113,15 +108,20 @@ public class StorageInterfaceScreenHandler extends ScreenHandler {
             ItemStack stackInSlot = slot.getStack();
             ItemStack originalStack = stackInSlot.copy();
 
-            // Intercept standard shift-clicks and route them directly to our StorageMutator
-            // so insertion respect the container modes rather than trying to join vanilla hotbar slots.
+            slot.setStackNoCallbacks(ItemStack.EMPTY);
+
             boolean inserted = svemocan.vanilla_storage_interface.StorageMutator.insertDirectly(
                     (net.minecraft.server.network.ServerPlayerEntity) player, this, stackInSlot
             );
 
             if (inserted) {
+                if (!stackInSlot.isEmpty()) {
+                    slot.setStackNoCallbacks(stackInSlot);
+                }
                 slot.markDirty();
                 return originalStack;
+            } else {
+                slot.setStackNoCallbacks(originalStack);
             }
         }
         return ItemStack.EMPTY;
@@ -136,7 +136,6 @@ public class StorageInterfaceScreenHandler extends ScreenHandler {
         if (!player.getWorld().isClient) {
             net.minecraft.world.World world = player.getWorld();
 
-            // Contextual close sounds based on what terminal type or inventory block was targeted
             if (this.terminalMode == 1) {
                 world.playSound(null, player.getBlockPos(), net.minecraft.sound.SoundEvents.BLOCK_ENDER_CHEST_CLOSE, net.minecraft.sound.SoundCategory.BLOCKS, 0.5f, 1.0f);
             } else if (this.terminalMode == 2) {

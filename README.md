@@ -1,4 +1,9 @@
 # Vanilla Storage Interface Mod
+![Modrinth Page](https://img.shields.io/badge/-Modrinth_Page-%2322ff84?style=for-the-badge)
+![Total Downloads](https://img.shields.io/modrinth/dt/vanilla-storage-interface?style=for-the-badge&label=Downloads)
+![Last Commit](https://img.shields.io/github/last-commit/Red-and-White-Fox/Vanilla-Storage-Interface?style=for-the-badge)
+![Latest Version](https://img.shields.io/modrinth/v/vanilla-storage-interface?style=for-the-badge&label=latest%20version)
+![Supported Game Versions](https://img.shields.io/modrinth/game-versions/vanilla-storage-interface?style=for-the-badge&label=supported%20game%20versions)
 
 <p align="center">
   <img src="images/icon.png" alt="icon.png" />
@@ -22,15 +27,14 @@ It also includes massive Quality-of-Life (QoL) features for accessing portable s
 ---
 
 ## ✨ Features ✨
-*TODO: Short mod showcase vid, images.*
 
 ### 💻 Unified User Interface
 
 Interacting with a Storage Interface opens a custom terminal tailored for bulk and miscellaneous item management:
 
 * **Live Search Bar:** Quickly find what you need (Can sync with REI / *EMI support planned*).
-* **Smart Sorting:** Sort items A-Z, Ascending, or Descending. Active sorting modes feature a sleek, semi-transparent green highlight so you always know which filter is active.
-* **Scrollable Grid:** Bypasses Vanilla slot limits entirely.
+* **Smart Sorting:** Sort items A-Z, Ascending, or Descending. Active sorting modes feature a sleek, semi-transparent green highlight so you always know which filter is active. Enchanted Books are intelligently sorted by their primary enchantment name.
+* **Scrollable Grid:** Bypasses Vanilla slot limits entirely. Features a dynamic 1.5-second sorting pause when scroll-extracting items to prevent items from shifting under the cursor.
 * **Dynamic Quantities:** Displays compact, easy-to-read numbers (like `1.5k`) for stacks exceeding 64.
 * **Live External Syncing:** The terminal actively listens to its connected physical inventory. If a Hopper injects an item or another player takes something out, your open terminal updates in real-time.
 
@@ -38,6 +42,11 @@ Interacting with a Storage Interface opens a custom terminal tailored for bulk a
   <img src="images/storageinterfacepreview.png" alt="interface_preview.png" />
 </p>
 
+### 🗄️ Smart Storage Defragmentation
+
+Press a hotkey to optimize your storage! The server safely vacuums items, merges partial stacks, sorts them based on your settings, and repacks them to maximize item density in the storage's Shulker Boxes.
+* `Ctrl + S`: Defragments and compresses the contents of all Shulker Boxes inside the storage. (Ignores loose items in the Chest, Barrel, ...).
+* `Ctrl + Shift + S`: A defrag that vacuums *everything* (loose items and Shulkers), maximizes Shulker Box space to free up empty boxes, and returns any overflow to the loose chest slots.
 
 ### ![ender_chest.png](images/ender_chest.png) Portable Terminals (Void, Player & Shulker)
 
@@ -57,15 +66,15 @@ Think of it as a built-in Item Frame, but without the Vanilla entity lag and pac
 ### 🌸 Blends Into Your Builds
 
 * **Rustic & Modern:** Comes in **34 variants**. All 11 wood types in all 3 forms (Planks, Logs, and Stripped Logs/Stems) plus a Black Stained Glass variant. More to come!
-* **💡 Glow in the Dark:** Right-click the Storage Interface block with a **Glow Ink Sac** to make it glow! Made a mistake? Right-click with a **Wet Sponge** to wipe the ink off. 😄
+* **💡 Glow in the Dark:** Right-click the Storage Interface block with a **Glow Ink Sac** to make it glow! Made a mistake? Right-click with a **Wet Sponge** to wipe the ink off. 😄 *(Can be toggled in settings).*
 
-### 📦 Intelligent Auto-Packing
+### ![shulker box](images/shulker_box.png) Intelligent Auto-Packing
 
-If you Shift-Click loose items into a Storage Interface connected to an inventory containing empty Shulker Boxes, the mod will automatically compress and pack those loose items into the empty Shulker Boxes to save space.
+When Shift-Clicking loose items into a Storage Interface, the system utilizes a smart 3-pass routing algorithm. It will first attempt to top off existing stacks, then intelligently group items into Shulker Boxes that *already contain* that specific item type, and finally fallback to packing items into empty Shulker Boxes to save space.
 
 ### 🛡️ Stackable Shulker Box Safety
 
-Fully integrated support for mods that increase Shulker Box stack sizes (like Carpet or AllStackable). The terminal safely splits stacked Shulker Boxes when interacting with them, preventing accidental item duplication or box deletion.
+Fully integrated support for mods that increase Shulker Box stack sizes (like Carpet or AllStackable). The terminal safely auto-splits stacked Shulker Boxes when interacting with them, preventing accidental item duplication or box deletion.
 
 ---
 
@@ -82,23 +91,21 @@ Fully integrated support for mods that increase Shulker Box stack sizes (like Ca
 * `Right-Click`: Extract exactly one item.
 * `Shift + Scroll Down`: Rapidly pull out full stacks!
 * `Ctrl + Scroll Down`: Rapidly pull out single items!
+* `Drop Key`: Hover over an item and press Q (or whatever you have it set to in your game) to throw it into the world. Hold `Ctrl + Q` to throw stacks. Hold the key to throw a continuous stream!
 * `Shift-Click (From Inventory)`: Insert items.
 * `Shift + Double-Click`: Quick-move ALL matching items from your inventory into the terminal.
 
-### ⌨️ Native IPN-like Item Movement Features ([Inventory Profiles Next](https://modrinth.com/mod/inventory-profiles-next))
+### ⌨️ Native IPN Integration ([Inventory Profiles Next](https://modrinth.com/mod/inventory-profiles-next))
 
-If you have IPN installed, the mod dynamically reads your `inventoryprofiles.json` configuration and mimics your **"Move All Items"** action. Whether you use a modifier + click (like `Space + Left Click`) or a pure keyboard chord (like `Left Alt + B`), your muscle memory will work perfectly inside the Virtual Terminal!
+If Inventory Profiles Next is installed, the mod acts as a soft dependency and reads the live IPN memory and configuration. It natively mimics IPN item movement logic, including custom keybinds and modifiers!
 
-**If you don't have IPN installed, this defaults to `Space + Left Click`.**
+**If IPN is not installed, this defaults to `Space + Left Click` (alongside standard modifiers).**
 
-* **Move All Matching:** Hover over an item and trigger your IPN action to instantly vacuum every identical item from that inventory into the opposite one.
-* **Dump Inventory:** Hover over an empty slot in your player inventory and trigger your IPN action to instantly dump everything (excluding your hotbar) into the terminal.
-* **Refill Inventory:** Hover over an empty space in the terminal grid and trigger your IPN action to instantly top off all partial stacks in your player inventory.
-* **Refill Cursor:** Hold a partial stack of items on your cursor and `Middle-Click` that exact item in the terminal to instantly max out your hand to 64!
-* **Smart Search Bar Logic:** Pressing your IPN keys while hovering over items will intelligently intercept the keystrokes so you don't accidentally type spaces or letters into the search bar.
-
-> **Developer Note on IPN Integration:**
-> Because this mod utilizes a fully virtual inventory – and *not* standard Minecraft inventory `Slot`s – making IPN work natively out of the box is impossible. Instead, I built a lightweight translation layer that parses your IPN settings from disk and perfectly replicates the logic natively inside the UI for some of the (imo most useful) IPN item movement magic features.
+* **Move All Matching:** Trigger your IPN action while hovering over an item to vacuum every identical item from that inventory into the opposite one.
+* **Dump/Refill Inventory:** Trigger your IPN action over an empty slot to instantly dump or refill items.
+* **Refill Cursor:** Hold a partial stack of items on your cursor and `Middle-Click` that exact item in the terminal to instantly max out the hand.
+* **Modifier Support:** Fully supports configured IPN modifier inputs for moving matching items or including the hotbar in mass-transfers.
+* **Smart Search Bar Logic:** Prioritizes IPN keystrokes to intelligently intercept inputs, preventing accidental spaces or letters from typing into the search bar when executing inventory actions. *(Can be configured in settings).*
 
 ### 🖥️ Default Keybinds
 
@@ -106,8 +113,10 @@ If you have IPN installed, the mod dynamically reads your `inventoryprofiles.jso
 * `H`: Opens a **Shulker Box Terminal** for the box your mouse is currently hovering over.
 * `B`: Opens a **Shulker Box Terminal** for the box in your hand (or offhand).
 * `N`: Opens the **Player Inventory Terminal** (Searches all Shulkers in your inventory).
+* `Ctrl + S`: Defragment and condense Shulker Boxes in the active terminal.
+* `Ctrl + Shift + S`: Fully defragment and condense *all* items (loose items and Shulkers) in the active terminal.
 
-*Note: Holding `Shift` while pressing any of the above keybinds opens the default Vanilla UI instead of the terminal. If `Invert Shift Modifiers` is enabled in the config, this logic is reversed.*
+*Note: Holding `Shift` while pressing any of the UI opening keybinds opens the default Vanilla UI instead of the terminal. If `Invert Shift Modifiers` is enabled in the config, this logic is reversed.*
 
 ---
 
