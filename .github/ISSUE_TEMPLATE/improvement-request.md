@@ -8,6 +8,11 @@ type: Task
 
 ---
 
+### Mod version that you're using and you're referring to:
+**i.e. 0.8.0**
+
+---
+
 **What feature/part of the mod is this about?**
     i.e. sorting of items in the Void Terminal...
 

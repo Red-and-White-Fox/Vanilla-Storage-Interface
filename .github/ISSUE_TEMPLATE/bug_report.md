@@ -1,10 +1,15 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Create a report to help us improve the mod
 title: "[BUG] ...few words describing the bug...."
 labels: bug
 assignees: Svemocan
 type: Bug
+
+---
+
+## Mod Version that the BUG was observed in
+**i.e. 0.8.0**
 
 ---
 

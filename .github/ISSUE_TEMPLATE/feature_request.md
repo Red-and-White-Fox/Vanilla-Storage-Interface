@@ -2,7 +2,7 @@
 name: Feature request
 about: Suggest an idea for this project
 title: "[FEATURE REQ] ..few words describing the requested feature...."
-labels: enhancement
+labels: ''
 assignees: Svemocan
 type: Feature
 
