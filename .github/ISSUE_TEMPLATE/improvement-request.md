@@ -8,8 +8,8 @@ type: Task
 
 ---
 
-### Mod version that you're using and you're referring to:
-**i.e. 0.8.0**
+**Mod version that you're using and you're referring to:**
+i.e. 0.8.0
 
 ---
 
