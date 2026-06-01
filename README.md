@@ -156,7 +156,7 @@ That's all there is to it, given that your game satisfies the following:
 For the dark mode UI to work, you will need to install two resource packs:
 
 1. Download the [Vanilla Tweaks Dark UI for MC 1.21.1](https://vanillatweaks.net/share#XggN3I) resource pack.
-2. Download the [VSI Dark UI Add-On](https://github.com/Red-and-White-Fox/Vanilla-Storage-Interface/raw/refs/heads/1.21.1/resourcepacks/VSI%20Dark%20UI.zip).
+2. Download the [VSI Dark UI](https://github.com/Red-and-White-Fox/Vanilla-Storage-Interface/raw/refs/heads/1.21.1/resourcepacks/VSI%20Dark%20UI.zip) Add-on resource pack.
 3. Place both `.zip` files into your `resourcepacks` folder.
 4. In-game, make sure the **VSI Add-On is positioned ABOVE** the Vanilla Tweaks resource pack in your list of active resourcepacks (the right one =D).
 
@@ -171,12 +171,12 @@ Vanilla Tweaks uses custom shader scripts to change all in-game UI text from the
 
 To fix this, the Vanilla Tweaks pack darkens all standard vanilla menus (chests, inventories, etc.). Our **VSI Dark UI Add-on** simply jumps on board, providing the dark textures needed for this mod's custom menus to match, while utilizing their white text rendering.
 
-If you kept Minecraft's default light-themed UI and used our dark mode add-on, you'd end up with unreadable gray text on a gray background (in the mod's UI)!
+If you keep Minecraft's default light-themed UI and use our dark mode add-on, you end up with unreadable gray text on a gray background (in the mod's UI)!
 <p align="center">
   <img src="images/darkondark.png" alt="Vanilla Storage Interface Dark Mode Icon" />
 </p>
 
-Conversely, if you use the Vanilla Tweaks Dark UI resourcepack, but don't use our add-on, you end up with white text on white background.
+Conversely, if you use the Vanilla Tweaks Dark UI resourcepack, but don't use our add-on, you end up with white text on a white background.
 <p align="center">
   <img src="images/lightonlight.png" alt="Vanilla Storage Interface Dark Mode Icon" />
 </p>
