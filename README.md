@@ -156,7 +156,7 @@ That's all there is to it, given that your game satisfies the following:
 For the dark mode UI to work, you will need to install two resource packs:
 
 1. Download the [Vanilla Tweaks Dark UI for MC 1.21.1](https://vanillatweaks.net/share#XggN3I) resource pack.
-2. Download the [VSI Dark UI Add-On](resourcepacks/VSI%20Dark%20UI.zip).
+2. Download the [VSI Dark UI Add-On](https://github.com/Red-and-White-Fox/Vanilla-Storage-Interface/raw/refs/heads/1.21.1/resourcepacks/VSI%20Dark%20UI.zip).
 3. Place both `.zip` files into your `resourcepacks` folder.
 4. In-game, make sure the **VSI Add-On is positioned ABOVE** the Vanilla Tweaks resource pack in your list of active resourcepacks (the right one =D).
 
