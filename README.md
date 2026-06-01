@@ -123,10 +123,12 @@ If Inventory Profiles Next is installed, the mod acts as a soft dependency and r
 
 ## ⚙️ Installation & Requirements
 
-Download the latest [`vanilla-storage-interface-X.Y.Z.jar`](https://github.com/Red-and-White-Fox/Vanilla-Storage-Interface/releases/latest) and place it into your `.minecraft/mods` folder. That's all there is to it, given that your game satisfies the following:
+Download the latest [`vanilla-storage-interface-X.Y.Z.jar`](https://github.com/Red-and-White-Fox/Vanilla-Storage-Interface/releases/latest) and place it into your `.minecraft/mods` folder.
 <p align="center">
   <img src="images/download.png" alt="Vanilla Storage Interface Dark Mode Icon" />
 </p>
+
+That's all there is to it, given that your game satisfies the following:
 
 **Requirements:**
 
