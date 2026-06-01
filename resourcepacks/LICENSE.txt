@@ -1,0 +1,9 @@
+The graphical assets in this directory (and the resulting resource pack) are derived from Vanilla Tweaks and are not covered by the GPL-3.0 license used by the Vanilla Storage Interface code.
+
+Under the Vanilla Tweaks terms of use, these assets:
+- Are free to use for the community.
+- May not be redistributed as-is without modification.
+- May not be restricted, sold, or locked behind donations/paywalls.
+
+Credits:
+Vanilla Tweaks: https://vanillatweaks.net/

@@ -1,12 +1,13 @@
 # Vanilla Storage Interface Mod
-![Modrinth Page](https://img.shields.io/badge/-Modrinth_Page-%2322ff84?style=for-the-badge)
-![Total Downloads](https://img.shields.io/modrinth/dt/vanilla-storage-interface?style=for-the-badge&label=Downloads)
-![Last Commit](https://img.shields.io/github/last-commit/Red-and-White-Fox/Vanilla-Storage-Interface?style=for-the-badge)
-![Latest Version](https://img.shields.io/modrinth/v/vanilla-storage-interface?style=for-the-badge&label=latest%20version)
-![Supported Game Versions](https://img.shields.io/modrinth/game-versions/vanilla-storage-interface?style=for-the-badge&label=supported%20game%20versions)
+
+<a href="https://modrinth.com/mod/vanilla-storage-interface"><img src="https://img.shields.io/badge/-Modrinth_Page-%2322ff84?style=for-the-badge" alt="Modrinth Page"></a>
+<a href="https://modrinth.com/mod/vanilla-storage-interface/versions"><img src="https://img.shields.io/modrinth/dt/vanilla-storage-interface?style=for-the-badge&label=Downloads" alt="Total Downloads"></a>
+<a href="https://github.com/Red-and-White-Fox/Vanilla-Storage-Interface/commits"><img src="https://img.shields.io/github/last-commit/Red-and-White-Fox/Vanilla-Storage-Interface?style=for-the-badge" alt="Last Commit"></a>
+<a href="https://github.com/Red-and-White-Fox/Vanilla-Storage-Interface/releases/latest"><img src="https://img.shields.io/modrinth/v/vanilla-storage-interface?style=for-the-badge&label=latest%20version" alt="Latest Version"></a>
+<img src="https://img.shields.io/modrinth/game-versions/vanilla-storage-interface?style=for-the-badge&label=supported%20game%20versions" alt="Supported Game Versions">
 
 <p align="center">
-  <img src="images/icon.png" alt="icon.png" />
+  <img src="images/icon.png" alt="Vanilla Storage Interface Icon" />
 </p>
 
 **A sleek, Vanilla-oriented storage terminal mod for Minecraft 1.21.1 (Fabric).**
@@ -141,6 +142,40 @@ Place the `.jar` into your `.minecraft/mods` folder and launch the game. That's 
 
 ---
 
+## 🖤 Dark UI Resourcepack Add-on
+
+<p align="center">
+  <img src="images/darkmode.png" alt="Vanilla Storage Interface Dark Mode Icon" />
+</p>
+
+For the dark mode UI to work, you will need to install two resource packs:
+
+1. Download the [Vanilla Tweaks Dark UI for MC 1.21.1](https://vanillatweaks.net/share#XggN3I) resource pack.
+2. Download the [VSI Dark UI Add-On](resourcepacks/VSI%20Dark%20UI.zip).
+3. Place both `.zip` files into your `resourcepacks` folder.
+4. In-game, make sure the **VSI Add-On is positioned ABOVE** the Vanilla Tweaks resource pack in your list of active resourcepacks (the right one =D).
+
+Your resourcepacks list should look something like this (of course, if you're using more resourcepacks than just these two, your list would be longer and you probably don't need these instructions in the first place):
+<p align="center">
+  <img src="images/order.png" alt="Vanilla Storage Interface Dark Mode Icon" />
+</p>
+
+### Why do I need both?
+
+Vanilla Tweaks uses custom shader scripts to change all in-game UI text from the default dark gray to an off-white color. However, this affects *all* text globally.
+
+To fix this, the Vanilla Tweaks pack darkens all standard vanilla menus (chests, inventories, etc.). Our **VSI Dark UI Add-on** simply jumps on board, providing the dark textures needed for this mod's custom menus to match, while utilizing their white text rendering.
+
+If you kept Minecraft's default light-themed UI and used our dark mode add-on, you'd end up with unreadable gray text on a gray background (in the mod's UI)!
+<p align="center">
+  <img src="images/darkondark.png" alt="Vanilla Storage Interface Dark Mode Icon" />
+</p>
+
+Conversely, if you use the Vanilla Tweaks Dark UI resourcepack, but don't use our add-on, you end up with white text on white background.
+<p align="center">
+  <img src="images/lightonlight.png" alt="Vanilla Storage Interface Dark Mode Icon" />
+</p>
+
 ## 🛠️ Nerd Area
 
 If you want to poke around the code, here are a couple of notes:
@@ -155,6 +190,19 @@ Straight up, I don't like lag. Rendering 3D items inside glass panes usually req
 
 **REI Integration**
 The mod hooks into REI natively. Hovering over any item in the virtual grid and pressing `R` or `U` will pull up recipes/uses exactly as if it were a physical item in your inventory.
+
+
+---
+
+## License Information
+
+This repository contains two distinct works with separate licensing:
+
+*   **Vanilla Storage Interface (The Mod):** The core mod project, including all code and default assets, is licensed under the GPL-3.0 License. See the root LICENSE file for details.
+
+*   **Dark UI Resource Pack (The Add-on):** The resource pack located in the `/resourcepacks` directory is an independent, derived work. Its graphical assets are heavily derived from **Vanilla Tweaks** and are distributed under their non-commercial Terms of Use. This specific directory is not covered by the GPL-3.0 license. See `/resourcepacks/LICENSE.txt` and `/resourcepacks/credits.txt` for specific terms and attribution.
+
+(Credits: Dark UI assets derived from Vanilla Tweaks: https://vanillatweaks.net/)
 
 ---
 
