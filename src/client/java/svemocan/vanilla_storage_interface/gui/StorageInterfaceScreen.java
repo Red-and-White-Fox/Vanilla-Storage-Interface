@@ -329,6 +329,20 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                 this.filteredItems.set(i, new VirtualItem(oldItem.stack(), newCount));
             }
             this.filteredItems.removeIf(vi -> vi.count() <= 0);
+
+            String currentQuery = this.searchBox != null ? this.searchBox.getText() : "";
+            for (VirtualItem vi : this.virtualItems) {
+                boolean exists = false;
+                for (VirtualItem existing : this.filteredItems) {
+                    if (ItemStack.areItemsAndComponentsEqual(vi.stack(), existing.stack())) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists && matchesSearch(vi, currentQuery)) {
+                    this.filteredItems.add(vi);
+                }
+            }
             return;
         }
         if (this.searchBox != null) this.updateSearch(this.searchBox.getText());
@@ -342,6 +356,24 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         return defaultName;
     }
 
+    private boolean matchesSearch(VirtualItem vi, String query) {
+        if (query == null || query.isEmpty()) return true;
+        String lowerQuery = query.toLowerCase();
+        String name = vi.stack().getName().getString().toLowerCase();
+        if (name.contains(lowerQuery)) return true;
+
+        net.minecraft.component.type.ItemEnchantmentsComponent enchantments = vi.stack().get(net.minecraft.component.DataComponentTypes.STORED_ENCHANTMENTS);
+        if (enchantments == null) enchantments = vi.stack().get(net.minecraft.component.DataComponentTypes.ENCHANTMENTS);
+
+        if (enchantments != null) {
+            for (var entry : enchantments.getEnchantments()) {
+                String enchName = entry.value().description().getString().toLowerCase();
+                if (enchName.contains(lowerQuery)) return true;
+            }
+        }
+        return false;
+    }
+
     private void updateSearch(String query) {
         String lowerQuery = query.toLowerCase();
 
@@ -350,21 +382,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         }
 
         java.util.stream.Stream<VirtualItem> stream = virtualItems.stream()
-                .filter(vi -> {
-                    String name = vi.stack().getName().getString().toLowerCase();
-                    if (name.contains(lowerQuery)) return true;
-
-                    net.minecraft.component.type.ItemEnchantmentsComponent enchantments = vi.stack().get(net.minecraft.component.DataComponentTypes.STORED_ENCHANTMENTS);
-                    if (enchantments == null) enchantments = vi.stack().get(net.minecraft.component.DataComponentTypes.ENCHANTMENTS);
-
-                    if (enchantments != null) {
-                        for (var entry : enchantments.getEnchantments()) {
-                            String enchName = entry.value().description().getString().toLowerCase();
-                            if (enchName.contains(lowerQuery)) return true;
-                        }
-                    }
-                    return false;
-                });
+                .filter(vi -> matchesSearch(vi, lowerQuery));
 
         switch (currentSortMode) {
             case DESC -> stream = stream.sorted((v1, v2) -> Integer.compare(v2.count(), v1.count()));
