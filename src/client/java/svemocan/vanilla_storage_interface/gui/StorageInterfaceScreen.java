@@ -139,6 +139,8 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         }
 
         if (this.focusedSlot != null && this.focusedSlot.inventory instanceof PlayerInventory) {
+            this.lastSwipedSlotId = this.focusedSlot.id; // Record physical slot interaction to prevent double drag triggers
+
             long time = net.minecraft.util.Util.getMeasuringTimeMs();
             boolean isDoubleClick = (time - lastShiftClickTime < 250) && (lastShiftClickedSlotId == this.focusedSlot.id);
 
@@ -170,6 +172,10 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         ItemStack hoveredItem = getHoveredVirtualItem(mouseX, mouseY);
 
         if (overVirtualGrid) {
+            int col = (int) (mouseX - (startX + 8)) / 18;
+            int row = (int) (mouseY - (startY + 36)) / 18;
+            int gridId = (scrollOffset * COLUMNS) + (row * COLUMNS) + col + 1000;
+
             if (button == 2 && hoveredItem != null && !cursorStack.isEmpty() && ItemStack.areItemsAndComponentsEqual(cursorStack, hoveredItem)) {
                 int needed = cursorStack.getMaxCount() - cursorStack.getCount();
                 if (needed > 0) {
@@ -181,10 +187,12 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
             if (button == 0 || button == 1) {
                 if (!cursorStack.isEmpty()) {
+                    this.lastSwipedSlotId = gridId; // Record virtual slot interaction
                     net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
                     ClientPlayNetworking.send(new StorageActionPayload("INSERT_CURSOR", ItemStack.EMPTY, (button == 0) ? cursorStack.getCount() : 1));
                     return true;
                 } else if (hoveredItem != null) {
+                    this.lastSwipedSlotId = gridId; // Record virtual slot interaction
                     net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
                     ClientPlayNetworking.send(new StorageActionPayload(Screen.hasShiftDown() ? "SHIFT_EXTRACT" : "EXTRACT", hoveredItem, (button == 0) ? 64 : 1));
                     this.pauseSortingTime = net.minecraft.util.Util.getMeasuringTimeMs() + 1500;
