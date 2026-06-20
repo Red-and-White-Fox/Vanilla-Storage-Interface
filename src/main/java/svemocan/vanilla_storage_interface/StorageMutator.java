@@ -33,7 +33,8 @@ public class StorageMutator {
                     if (action.equals("CLEAR_DISPLAY")) {
                         interfaceBe.setDisplayItem(new ItemStack(net.minecraft.item.Items.STRUCTURE_VOID));
                     } else if (action.equals("SET_DISPLAY")) {
-                        interfaceBe.setDisplayItem(targetStack.copyWithCount(1));
+                        ItemStack safeCursor = player.currentScreenHandler.getCursorStack();
+                        interfaceBe.setDisplayItem(safeCursor.isEmpty() ? ItemStack.EMPTY : safeCursor.copyWithCount(1));
                     } else if (action.equals("SCALE_DISPLAY")) {
                         interfaceBe.setDisplayScale(interfaceBe.getDisplayScale() + (amountNeeded > 0 ? 0.05f : -0.05f));
                     } else if (action.equals("ROTATE_DISPLAY")) {
@@ -57,23 +58,8 @@ public class StorageMutator {
                 inv = net.minecraft.block.entity.HopperBlockEntity.getInventoryAt(world, interfacePos.offset(facing.getOpposite()));
             }
         } else if (handler.getTerminalMode() == 1) {
-            inv = player.getEnderChestInventory();
-        } else if (handler.getTerminalMode() == 2) {
+            inv = player.getEnderChestInventory();} else if (handler.getTerminalMode() == 2) {
             ItemStack shulkerStack = player.getInventory().getStack(handler.getShulkerSlot());
-
-            if (shulkerStack.getCount() > 1) {
-                int emptySlot = player.getInventory().getEmptySlot();
-                if (emptySlot != -1) {
-                    ItemStack singleBox = shulkerStack.copyWithCount(1);
-                    ItemStack leftover = shulkerStack.copyWithCount(shulkerStack.getCount() - 1);
-                    player.getInventory().setStack(handler.getShulkerSlot(), singleBox);
-                    player.getInventory().setStack(emptySlot, leftover);
-                    shulkerStack = singleBox;
-                } else {
-                    return;
-                }
-            }
-
             if (isShulkerBox(shulkerStack.getItem())) inv = new ShulkerItemInventory(shulkerStack);
         } else if (handler.getTerminalMode() == 3) {
             final net.minecraft.entity.player.PlayerInventory pInv = player.getInventory();
@@ -553,7 +539,7 @@ public class StorageMutator {
         if (originalStack.isEmpty() || amountToInsert <= 0) return amountToInsert;
         boolean isTargetShulker = isShulkerBox(originalStack.getItem());
 
-        if (isTargetShulker && inv instanceof net.minecraft.block.entity.ShulkerBoxBlockEntity) return amountToInsert;
+        if (isTargetShulker && (inv instanceof net.minecraft.block.entity.ShulkerBoxBlockEntity || inv instanceof ShulkerItemInventory)) return amountToInsert;
         if (isTargetShulker) {
             net.minecraft.component.type.ContainerComponent container = originalStack.getOrDefault(net.minecraft.component.DataComponentTypes.CONTAINER, net.minecraft.component.type.ContainerComponent.DEFAULT);
             if (container.iterateNonEmpty().iterator().hasNext()) return amountToInsert;
@@ -877,6 +863,7 @@ public class StorageMutator {
             shulkerStack.set(net.minecraft.component.DataComponentTypes.CONTAINER, net.minecraft.component.type.ContainerComponent.fromStacks(items));
         }
         @Override public boolean canPlayerUse(net.minecraft.entity.player.PlayerEntity player) { return true; }
+        @Override public boolean isValid(int slot, ItemStack stack) { return !isShulkerBox(stack.getItem()); }
         @Override public void clear() { items.clear(); markDirty(); }
     }
 }

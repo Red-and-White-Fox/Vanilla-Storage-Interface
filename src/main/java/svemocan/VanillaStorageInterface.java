@@ -130,9 +130,6 @@ public class VanillaStorageInterface implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(OpenRawUIPayload.ID, OpenRawUIPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(OpenTerminalPayload.ID, (payload, context) -> {
-            // Context execution switching: Inbound packets arrive on netty network worker threads.
-            // Any modification of inventory states or world interactions MUST be wrapped in context.server().execute()
-            // to bounce execution back safely onto the main synchronized server tick loop thread.
             context.server().execute(() -> {
                 net.minecraft.server.network.ServerPlayerEntity player = context.player();
 
@@ -147,9 +144,25 @@ public class VanillaStorageInterface implements ModInitializer {
                     net.minecraft.item.ItemStack targetShulker = player.getInventory().getStack(targetIndex);
 
                     if (StorageMutator.isShulkerBox(targetShulker.getItem())) {
+                        if (targetShulker.getCount() > 1) {
+                            int emptySlot = player.getInventory().getEmptySlot();
+                            if (emptySlot != -1) {
+                                ItemStack singleBox = targetShulker.copyWithCount(1);
+                                ItemStack leftover = targetShulker.copyWithCount(targetShulker.getCount() - 1);
+                                player.getInventory().setStack(targetIndex, singleBox);
+                                player.getInventory().setStack(emptySlot, leftover);
+                                targetShulker = singleBox;
+                            } else {
+                                player.sendMessage(net.minecraft.text.Text.literal("§cCannot open stacked Shulker Box. Your inventory is full!"), true);
+                                return;
+                            }
+                        }
+
+                        final net.minecraft.item.ItemStack finalShulker = targetShulker; // CRITICAL FIX: Captures the effectively final state for the lambda
+
                         player.getServerWorld().playSound(null, player.getBlockPos(), net.minecraft.sound.SoundEvents.BLOCK_SHULKER_BOX_OPEN, net.minecraft.sound.SoundCategory.PLAYERS, 0.5F, player.getServerWorld().random.nextFloat() * 0.1F + 0.9F);
-                        player.openHandledScreen(new SimpleNamedScreenHandlerFactory((s, i, p) -> new StorageInterfaceScreenHandler(s, i, p.getBlockPos(), 2, targetIndex), targetShulker.getName()));
-                        StorageAggregator.VirtualInventory vi = StorageAggregator.buildFromInventory(player.getServerWorld(), new StorageMutator.ShulkerItemInventory(targetShulker));
+                        player.openHandledScreen(new SimpleNamedScreenHandlerFactory((s, i, p) -> new StorageInterfaceScreenHandler(s, i, p.getBlockPos(), 2, targetIndex), finalShulker.getName()));
+                        StorageAggregator.VirtualInventory vi = StorageAggregator.buildFromInventory(player.getServerWorld(), new StorageMutator.ShulkerItemInventory(finalShulker));
                         ServerPlayNetworking.send(player, new StorageSyncPayload(vi.items, vi.emptyShulkerSlots, player.getBlockPos(), true));
                     }
                 }
@@ -165,8 +178,6 @@ public class VanillaStorageInterface implements ModInitializer {
             context.server().execute(() -> {
                 net.minecraft.server.network.ServerPlayerEntity player = context.player();
 
-                // Raw UI Bypass Routing: Allows custom storage definitions (like our ShulkerItemInventory wrappers)
-                // to inject themselves straight into default vanilla screen factories, bypassing custom interfaces.
                 if (payload.mode() == 1 && CONFIG.enableVoidRaw) {
                     player.getServerWorld().playSound(null, player.getBlockPos(), net.minecraft.sound.SoundEvents.BLOCK_ENDER_CHEST_OPEN, net.minecraft.sound.SoundCategory.PLAYERS, 0.5F, player.getServerWorld().random.nextFloat() * 0.1F + 0.9F);
                     player.openHandledScreen(new SimpleNamedScreenHandlerFactory((syncId, inv, p) ->
@@ -175,9 +186,25 @@ public class VanillaStorageInterface implements ModInitializer {
                 else if (payload.mode() == 2 && CONFIG.enableBoxRaw) {
                     net.minecraft.item.ItemStack targetShulker = player.getInventory().getStack(payload.targetId());
                     if (StorageMutator.isShulkerBox(targetShulker.getItem())) {
+                        if (targetShulker.getCount() > 1) {
+                            int emptySlot = player.getInventory().getEmptySlot();
+                            if (emptySlot != -1) {
+                                ItemStack singleBox = targetShulker.copyWithCount(1);
+                                ItemStack leftover = targetShulker.copyWithCount(targetShulker.getCount() - 1);
+                                player.getInventory().setStack(payload.targetId(), singleBox);
+                                player.getInventory().setStack(emptySlot, leftover);
+                                targetShulker = singleBox;
+                            } else {
+                                player.sendMessage(net.minecraft.text.Text.literal("§cCannot open stacked Shulker Box. Your inventory is full!"), true);
+                                return;
+                            }
+                        }
+
+                        final net.minecraft.item.ItemStack finalShulker = targetShulker;
+
                         player.getServerWorld().playSound(null, player.getBlockPos(), net.minecraft.sound.SoundEvents.BLOCK_SHULKER_BOX_OPEN, net.minecraft.sound.SoundCategory.PLAYERS, 0.5F, player.getServerWorld().random.nextFloat() * 0.1F + 0.9F);
                         player.openHandledScreen(new SimpleNamedScreenHandlerFactory((syncId, inv, p) ->
-                                new net.minecraft.screen.ShulkerBoxScreenHandler(syncId, inv, new StorageMutator.ShulkerItemInventory(targetShulker)), targetShulker.getName()));
+                                new net.minecraft.screen.ShulkerBoxScreenHandler(syncId, inv, new StorageMutator.ShulkerItemInventory(finalShulker)), finalShulker.getName()));
                     }
                 }
             });

@@ -34,11 +34,27 @@ public class StorageInterfaceScreenHandler extends ScreenHandler {
 
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
-                this.addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 140 + row * 18));
+                int slotIndex = col + row * 9 + 9;
+                if (this.terminalMode == 2 && slotIndex == this.shulkerSlot) {
+                    this.addSlot(new Slot(playerInventory, slotIndex, 8 + col * 18, 140 + row * 18) {
+                        @Override public boolean canTakeItems(PlayerEntity playerEntity) { return false; }
+                        @Override public boolean canInsert(ItemStack stack) { return false; }
+                    });
+                } else {
+                    this.addSlot(new Slot(playerInventory, slotIndex, 8 + col * 18, 140 + row * 18));
+                }
             }
         }
         for (int col = 0; col < 9; ++col) {
-            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 198));
+            int slotIndex = col;
+            if (this.terminalMode == 2 && slotIndex == this.shulkerSlot) {
+                this.addSlot(new Slot(playerInventory, slotIndex, 8 + col * 18, 198) {
+                    @Override public boolean canTakeItems(PlayerEntity playerEntity) { return false; }
+                    @Override public boolean canInsert(ItemStack stack) { return false; }
+                });
+            } else {
+                this.addSlot(new Slot(playerInventory, slotIndex, 8 + col * 18, 198));
+            }
         }
     }
 
@@ -128,7 +144,20 @@ public class StorageInterfaceScreenHandler extends ScreenHandler {
     }
 
     @Override
-    public boolean canUse(PlayerEntity player) { return true; }
+    public boolean canUse(PlayerEntity player) {
+        if (this.terminalMode == 0) {
+            // Ensure the physical block still exists and the player is within 8 blocks (64 block radius squared)
+            if (player.getWorld().getBlockEntity(this.interfacePos) instanceof svemocan.vanilla_storage_interface.StorageInterfaceBlockEntity) {
+                return player.squaredDistanceTo(this.interfacePos.getX() + 0.5, this.interfacePos.getY() + 0.5, this.interfacePos.getZ() + 0.5) <= 64.0;
+            }
+            return false;
+        } else if (this.terminalMode == 2) {
+            // Ensure the player hasn't moved the active Shulker Box out of its slot via other means
+            return svemocan.vanilla_storage_interface.StorageMutator.isShulkerBox(player.getInventory().getStack(this.shulkerSlot).getItem());
+        }
+        // Mode 1 (Ender Chest) and Mode 3 (Player Inv) are strictly bound to the player entity itself, so they are always valid
+        return true;
+    }
 
     @Override
     public void onClosed(PlayerEntity player) {
