@@ -522,6 +522,12 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) return super.keyPressed(keyCode, scanCode, modifiers);
 
+        if (this.searchBox.isFocused()) {
+            if (this.searchBox.keyPressed(keyCode, scanCode, modifiers)) return true;
+            if (this.client.options.inventoryKey.matchesKey(keyCode, scanCode)) return true;
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
+
         if (keyCode == GLFW.GLFW_KEY_S && Screen.hasControlDown()) {
             boolean fullDefrag = Screen.hasShiftDown();
             ClientPlayNetworking.send(new StorageActionPayload(fullDefrag ? "DEFRAGMENT_ALL" : "DEFRAGMENT_SHULKERS", ItemStack.EMPTY, 0));
@@ -530,28 +536,27 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         }
 
         if (keyCode == IpnCompatWrapper.triggerKey && IpnCompatWrapper.triggerKey != -1) {
-            double scaledMouseX = this.client.mouse.getX() * (double) this.client.getWindow().getScaledWidth() / (double) this.client.getWindow().getWidth();
-            double scaledMouseY = this.client.mouse.getY() * (double) this.client.getWindow().getScaledHeight() / (double) this.client.getWindow().getHeight();
-            executeIpnAction(scaledMouseX, scaledMouseY);
-            return true;
-        }
+            boolean shouldAutofocus = VanillaStorageInterface.CONFIG.autoFocusSearchBar && !VanillaStorageInterface.CONFIG.ipnHasPriorityOverAutoFocus;
 
-        if (this.searchBox.isFocused()) {
-            if (this.searchBox.keyPressed(keyCode, scanCode, modifiers)) return true;
-            if (this.client.options.inventoryKey.matchesKey(keyCode, scanCode)) return true;
-        } else {
-            if (this.client.options.dropKey.matchesKey(keyCode, scanCode)) {
-                this.interceptDropKeyChar = true; // Tell charTyped to ignore the resulting character
-
+            if (!shouldAutofocus) {
                 double scaledMouseX = this.client.mouse.getX() * (double) this.client.getWindow().getScaledWidth() / (double) this.client.getWindow().getWidth();
                 double scaledMouseY = this.client.mouse.getY() * (double) this.client.getWindow().getScaledHeight() / (double) this.client.getWindow().getHeight();
+                executeIpnAction(scaledMouseX, scaledMouseY);
+                return true;
+            }
+        }
 
-                ItemStack hoveredItem = getHoveredVirtualItem(scaledMouseX, scaledMouseY);
-                if (hoveredItem != null) {
-                    boolean dropEntireStack = Screen.hasControlDown();
-                    ClientPlayNetworking.send(new StorageActionPayload("THROW", hoveredItem, dropEntireStack ? 64 : 1));
-                    return true;
-                }
+        if (this.client.options.dropKey.matchesKey(keyCode, scanCode)) {
+            this.interceptDropKeyChar = true; // Tell charTyped to ignore the resulting character
+
+            double scaledMouseX = this.client.mouse.getX() * (double) this.client.getWindow().getScaledWidth() / (double) this.client.getWindow().getWidth();
+            double scaledMouseY = this.client.mouse.getY() * (double) this.client.getWindow().getScaledHeight() / (double) this.client.getWindow().getHeight();
+
+            ItemStack hoveredItem = getHoveredVirtualItem(scaledMouseX, scaledMouseY);
+            if (hoveredItem != null) {
+                boolean dropEntireStack = Screen.hasControlDown();
+                ClientPlayNetworking.send(new StorageActionPayload("THROW", hoveredItem, dropEntireStack ? 64 : 1));
+                return true;
             }
         }
 
@@ -571,6 +576,8 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         boolean isOverVirtual = mouseX >= startX + 8 && mouseX < startX + 8 + (COLUMNS * 18) && mouseY >= startY + 36 && mouseY < startY + 36 + (ROWS * 18);
         boolean isOverPlayer = this.focusedSlot != null && this.focusedSlot.inventory instanceof PlayerInventory;
 
+        boolean isDirectedAtStorage = mouseX >= startX && mouseX < startX + this.backgroundWidth && mouseY >= startY && mouseY < startY + 140;
+
         if (hasMatchMod) {
             if (isOverPlayer && this.focusedSlot.hasStack()) {
                 ClientPlayNetworking.send(new StorageActionPayload("IPN_MOVE_MATCHING_TO_STORAGE", this.focusedSlot.getStack(), hotbarFlag));
@@ -581,13 +588,13 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                 }
             }
         } else if (hasAllMod) {
-            if (isOverVirtual) {
+            if (isDirectedAtStorage) {
                 ClientPlayNetworking.send(new StorageActionPayload("IPN_MOVE_ALL_TO_PLAYER", ItemStack.EMPTY, hotbarFlag));
             } else {
                 ClientPlayNetworking.send(new StorageActionPayload("IPN_MOVE_ALL_TO_STORAGE", ItemStack.EMPTY, hotbarFlag));
             }
         } else {
-            if (isOverVirtual) {
+            if (isDirectedAtStorage) {
                 ClientPlayNetworking.send(new StorageActionPayload("IPN_REFILL_PLAYER", ItemStack.EMPTY, hotbarFlag));
             } else {
                 ClientPlayNetworking.send(new StorageActionPayload("IPN_REFILL_STORAGE", ItemStack.EMPTY, hotbarFlag));
@@ -605,7 +612,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
             }
         }
 
-        if (VanillaStorageInterface.CONFIG.ipnHasPriorityOverAutoFocus) {
+        if (!this.searchBox.isFocused() && VanillaStorageInterface.CONFIG.ipnHasPriorityOverAutoFocus) {
             long handle = this.client.getWindow().getHandle();
             if ((IpnCompatWrapper.triggerKey != -1 && net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.triggerKey)) ||
                     (IpnCompatWrapper.moveAllMod != -1 && net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.moveAllMod)) ||
@@ -637,7 +644,6 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
         boolean overVirtualGrid = mouseX >= startX + 8 && mouseX < startX + 8 + (COLUMNS * 18) && mouseY >= startY + 36 && mouseY < startY + 36 + (ROWS * 18);
 
-        // this.focusedSlot is natively provided by HandledScreen and is only non-null when hovering over a physical slot!
         return overVirtualGrid || this.focusedSlot != null;
     }
 }
