@@ -774,29 +774,37 @@ public class StorageMutator {
         svemocan.vanilla_storage_interface.config.VanillaStorageConfig.DefragSortMode mode =
                 svemocan.VanillaStorageInterface.CONFIG.defragmentationSortMode;
 
-        pool.sort((s1, s2) -> {
-            switch (mode) {
-                case QUANTITY_DESCENDING:
-                    int qtyDesc = Integer.compare(totalQuantities.get(s2.getName().getString()), totalQuantities.get(s1.getName().getString()));
-                    if (qtyDesc != 0) return qtyDesc;
-                    return s1.getName().getString().compareToIgnoreCase(s2.getName().getString());
-                case QUANTITY_ASCENDING:
-                    int qtyAsc = Integer.compare(totalQuantities.get(s1.getName().getString()), totalQuantities.get(s2.getName().getString()));
-                    if (qtyAsc != 0) return qtyAsc;
-                    return s1.getName().getString().compareToIgnoreCase(s2.getName().getString());
-                case REGISTRY_ID:
-                    String id1 = net.minecraft.registry.Registries.ITEM.getId(s1.getItem()).toString();
-                    String id2 = net.minecraft.registry.Registries.ITEM.getId(s2.getItem()).toString();
-                    int idCompare = id1.compareToIgnoreCase(id2);
-                    if (idCompare != 0) return idCompare;
-                    return Integer.compare(s2.getCount(), s1.getCount());
-                case ALPHABETICAL:
-                default:
-                    int nameCompare = s1.getName().getString().compareToIgnoreCase(s2.getName().getString());
-                    if (nameCompare != 0) return nameCompare;
-                    return Integer.compare(s2.getCount(), s1.getCount());
-            }
-        });
+        if (mode == svemocan.vanilla_storage_interface.config.VanillaStorageConfig.DefragSortMode.SMART_PACKING ||
+                mode == svemocan.vanilla_storage_interface.config.VanillaStorageConfig.DefragSortMode.ADAPTIVE_PACKING) {
+
+            boolean isAdaptive = (mode == svemocan.vanilla_storage_interface.config.VanillaStorageConfig.DefragSortMode.ADAPTIVE_PACKING);
+            pool = applyJardaHeuristic(pool, inv.size(), isAdaptive);
+
+        } else {
+            pool.sort((s1, s2) -> {
+                switch (mode) {
+                    case QUANTITY_DESCENDING:
+                        int qtyDesc = Integer.compare(totalQuantities.get(s2.getName().getString()), totalQuantities.get(s1.getName().getString()));
+                        if (qtyDesc != 0) return qtyDesc;
+                        return s1.getName().getString().compareToIgnoreCase(s2.getName().getString());
+                    case QUANTITY_ASCENDING:
+                        int qtyAsc = Integer.compare(totalQuantities.get(s1.getName().getString()), totalQuantities.get(s2.getName().getString()));
+                        if (qtyAsc != 0) return qtyAsc;
+                        return s1.getName().getString().compareToIgnoreCase(s2.getName().getString());
+                    case REGISTRY_ID:
+                        String id1 = net.minecraft.registry.Registries.ITEM.getId(s1.getItem()).toString();
+                        String id2 = net.minecraft.registry.Registries.ITEM.getId(s2.getItem()).toString();
+                        int idCompare = id1.compareToIgnoreCase(id2);
+                        if (idCompare != 0) return idCompare;
+                        return Integer.compare(s2.getCount(), s1.getCount());
+                    case ALPHABETICAL:
+                    default:
+                        int nameCompare = s1.getName().getString().compareToIgnoreCase(s2.getName().getString());
+                        if (nameCompare != 0) return nameCompare;
+                        return Integer.compare(s2.getCount(), s1.getCount());
+                }
+            });
+        }
 
         for (int i = 0; i < inv.size(); i++) {
             ItemStack stack = inv.getStack(i);
@@ -834,6 +842,102 @@ public class StorageMutator {
             }
         }
         if (!newStack.isEmpty()) pool.add(newStack);
+    }
+
+    /**
+     * The Jarda Heuristic (Bin-Packing / Knapsack Algorithm)
+     * Dedicated to our discrete optimization class professor :D.
+     * valuates storage density to perfectly fill or dynamically isolate Shulker Boxes.
+     */
+    private static java.util.List<net.minecraft.item.ItemStack> applyJardaHeuristic(java.util.List<net.minecraft.item.ItemStack> condensedStacks, int interfaceSlots, boolean isAdaptive) {
+        java.util.List<java.util.List<net.minecraft.item.ItemStack>> groups = new java.util.ArrayList<>();
+
+        // Group all identical items together
+        for (net.minecraft.item.ItemStack stack : condensedStacks) {
+            boolean found = false;
+            for (java.util.List<net.minecraft.item.ItemStack> group : groups) {
+                if (itemsMatch(group.get(0), stack)) {
+                    group.add(stack);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                java.util.List<net.minecraft.item.ItemStack> newGroup = new java.util.ArrayList<>();
+                newGroup.add(stack);
+                groups.add(newGroup);
+            }
+        }
+
+        java.util.List<net.minecraft.item.ItemStack> result = new java.util.ArrayList<>();
+        java.util.List<java.util.List<net.minecraft.item.ItemStack>> remainingGroups = new java.util.ArrayList<>();
+
+        // Determine Phase 1 Threshold based on current storage density
+        int phaseOneThreshold = 27; // Default: Strict space efficiency
+        if (isAdaptive && interfaceSlots > 0) {
+            double densityRatio = condensedStacks.size() / (double) (interfaceSlots * 27);
+            if (densityRatio <= 0.3) {
+                phaseOneThreshold = 9; // Abundant space: Isolate groups of 9+
+            } else if (densityRatio <= 0.6) {
+                phaseOneThreshold = 18; // Moderate space: Isolate groups of 18+
+            }
+        }
+
+        // Phase 1: Pure Boxes (Extract groups that meet the dynamic threshold)
+        for (java.util.List<net.minecraft.item.ItemStack> group : groups) {
+            while (group.size() >= phaseOneThreshold) {
+                int extractCount = Math.min(group.size(), 27); // Cap at physical box limit
+                for (int i = 0; i < extractCount; i++) result.add(group.remove(0));
+
+                // CRITICAL: Pad the remainder of the virtual box to isolate the items
+                int padding = 27 - extractCount;
+                for (int i = 0; i < padding; i++) result.add(net.minecraft.item.ItemStack.EMPTY);
+            }
+            if (!group.isEmpty()) remainingGroups.add(group);
+        }
+
+        // Phase 2: Knapsack Heuristic (Sort by largest remaining groups first)
+        remainingGroups.sort((a, b) -> Integer.compare(b.size(), a.size()));
+        java.util.List<net.minecraft.item.ItemStack> currentBox = new java.util.ArrayList<>();
+
+        while (!remainingGroups.isEmpty()) {
+            if (currentBox.size() == 27) {
+                result.addAll(currentBox);
+                currentBox.clear();
+            }
+
+            int spaceLeft = 27 - currentBox.size();
+            boolean packedAnything = false;
+
+            for (int i = 0; i < remainingGroups.size(); i++) {
+                java.util.List<net.minecraft.item.ItemStack> group = remainingGroups.get(i);
+                if (group.size() <= spaceLeft) {
+                    currentBox.addAll(group);
+                    remainingGroups.remove(i);
+                    packedAnything = true;
+                    break;
+                }
+            }
+
+            if (!packedAnything && !remainingGroups.isEmpty()) {
+                // Failsafe: Split the absolute smallest group to perfectly plug the gap
+                java.util.List<net.minecraft.item.ItemStack> smallestGroup = remainingGroups.get(remainingGroups.size() - 1);
+                for (int i = 0; i < spaceLeft; i++) {
+                    if (smallestGroup.isEmpty()) break;
+                    currentBox.add(smallestGroup.remove(0));
+                }
+                if (smallestGroup.isEmpty()) remainingGroups.remove(smallestGroup);
+            }
+        }
+
+        if (!currentBox.isEmpty()) {
+            result.addAll(currentBox);
+            // Pad the final box to ensure the iteration cycle completes cleanly
+            int padding = 27 - currentBox.size();
+            for (int i = 0; i < padding; i++) result.add(net.minecraft.item.ItemStack.EMPTY);
+        }
+
+        return result;
     }
 
     public static class ShulkerItemInventory implements Inventory {

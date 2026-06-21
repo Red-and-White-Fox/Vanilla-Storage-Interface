@@ -9,6 +9,8 @@ import svemocan.VanillaStorageInterface;
 public class VanillaStorageConfig implements ConfigData {
 
     public enum DefragSortMode {
+        SMART_PACKING,
+        ADAPTIVE_PACKING,
         ALPHABETICAL,
         QUANTITY_DESCENDING,
         QUANTITY_ASCENDING,
