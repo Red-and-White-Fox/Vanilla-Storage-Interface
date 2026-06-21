@@ -194,7 +194,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                 } else if (hoveredItem != null) {
                     this.lastSwipedSlotId = gridId; // Record virtual slot interaction
                     net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                    ClientPlayNetworking.send(new StorageActionPayload(Screen.hasShiftDown() ? "SHIFT_EXTRACT" : "EXTRACT", hoveredItem, (button == 0) ? 64 : 1));
+                    ClientPlayNetworking.send(new StorageActionPayload(Screen.hasShiftDown() ? "SHIFT_EXTRACT" : "EXTRACT", hoveredItem, (button == 0) ? hoveredItem.getMaxCount() : 1));
                     this.pauseSortingTime = net.minecraft.util.Util.getMeasuringTimeMs() + 1500;
                     return true;
                 }
@@ -230,7 +230,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                     ItemStack hoveredItem = getHoveredVirtualItem(mouseX, mouseY);
                     if (hoveredItem != null) {
                         net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                        ClientPlayNetworking.send(new StorageActionPayload("SHIFT_EXTRACT", hoveredItem, hasShift ? 64 : 1));
+                        ClientPlayNetworking.send(new StorageActionPayload("SHIFT_EXTRACT", hoveredItem, hasShift ? hoveredItem.getMaxCount() : 1));
                         this.pauseSortingTime = net.minecraft.util.Util.getMeasuringTimeMs() + 1500;
                     }
                 }
@@ -526,7 +526,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                     if (hoveredItem != null) {
                         this.lastSwipedSlotId = gridId;
                         net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.ITEM_BUNDLE_REMOVE_ONE, 1.0F));
-                        ClientPlayNetworking.send(new StorageActionPayload("SHIFT_EXTRACT", hoveredItem, 64));
+                        ClientPlayNetworking.send(new StorageActionPayload("SHIFT_EXTRACT", hoveredItem, hoveredItem.getMaxCount()));
                         this.pauseSortingTime = net.minecraft.util.Util.getMeasuringTimeMs() + 1500;
                         return true;
                     }
@@ -581,7 +581,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
             ItemStack hoveredItem = getHoveredVirtualItem(scaledMouseX, scaledMouseY);
             if (hoveredItem != null) {
                 boolean dropEntireStack = Screen.hasControlDown();
-                ClientPlayNetworking.send(new StorageActionPayload("THROW", hoveredItem, dropEntireStack ? 64 : 1));
+                ClientPlayNetworking.send(new StorageActionPayload("THROW", hoveredItem, dropEntireStack ? hoveredItem.getMaxCount() : 1));
                 return true;
             }
         }

@@ -153,7 +153,7 @@ public class StorageMutator {
                 ItemStack stack = player.getInventory().getStack(i);
                 if (!stack.isEmpty() && itemsMatch(stack, targetStack)) {
                     player.getInventory().setStack(i, ItemStack.EMPTY);
-                    int leftover = executeInsert(inv, stack, stack.getCount());
+                    int leftover = executeInsert(inv, stack.copy(), stack.getCount());
                     if (leftover > 0) player.getInventory().setStack(i, stack.copyWithCount(leftover));
                 }
             }
@@ -166,7 +166,7 @@ public class StorageMutator {
                     if (handler.getTerminalMode() == 3 && isShulkerBox(stack.getItem())) continue;
 
                     player.getInventory().setStack(i, ItemStack.EMPTY);
-                    int leftover = executeInsert(inv, stack, stack.getCount());
+                    int leftover = executeInsert(inv, stack.copy(), stack.getCount());
                     if (leftover > 0) player.getInventory().setStack(i, stack.copyWithCount(leftover));
                 }
             }
@@ -177,7 +177,7 @@ public class StorageMutator {
                 ItemStack stack = player.getInventory().getStack(i);
                 if (!stack.isEmpty() && stack.getCount() < stack.getMaxCount()) {
                     int needed = stack.getMaxCount() - stack.getCount();
-                    ItemStack extracted = executeExtract(inv, stack, needed);
+                    ItemStack extracted = executeExtract(inv, stack.copy(), needed);
                     if (extracted != null && !extracted.isEmpty()) {
                         stack.increment(extracted.getCount());
                     }
@@ -192,7 +192,7 @@ public class StorageMutator {
                 ItemStack stack = player.getInventory().getStack(i);
                 if (!stack.isEmpty() && itemsMatch(stack, targetStack)) {
                     player.getInventory().setStack(i, ItemStack.EMPTY);
-                    int leftover = executeInsert(inv, stack, stack.getCount());
+                    int leftover = executeInsert(inv, stack.copy(), stack.getCount());
                     if (leftover > 0) player.getInventory().setStack(i, stack.copyWithCount(leftover));
                 }
             }
@@ -216,7 +216,7 @@ public class StorageMutator {
                     if (handler.getTerminalMode() == 3 && isShulkerBox(stack.getItem())) continue;
 
                     player.getInventory().setStack(i, ItemStack.EMPTY);
-                    int leftover = executeInsert(inv, stack, stack.getCount());
+                    int leftover = executeInsert(inv, stack.copy(), stack.getCount());
                     if (leftover > 0) player.getInventory().setStack(i, stack.copyWithCount(leftover));
                 }
             }
@@ -233,7 +233,7 @@ public class StorageMutator {
                                 if (!inner.isEmpty()) {
                                     int space = calculatePlayerSpace(player.getInventory(), inner, targets);
                                     if (space > 0) {
-                                        ItemStack extracted = executeExtract(inv, inner, space);
+                                        ItemStack extracted = executeExtract(inv, inner.copy(), space);
                                         insertIntoPlayer(player, extracted, targets);
                                         if (extracted.getCount() > 0) executeInsert(inv, extracted, extracted.getCount());
                                     }
@@ -243,7 +243,7 @@ public class StorageMutator {
                     } else {
                         int space = calculatePlayerSpace(player.getInventory(), stack, targets);
                         if (space > 0) {
-                            ItemStack extracted = executeExtract(inv, stack, space);
+                            ItemStack extracted = executeExtract(inv, stack.copy(), space);
                             insertIntoPlayer(player, extracted, targets);
                             if (extracted.getCount() > 0) executeInsert(inv, extracted, extracted.getCount());
                         }
@@ -256,27 +256,13 @@ public class StorageMutator {
             for (int i = 0; i < inv.size(); i++) {
                 ItemStack stack = inv.getStack(i);
                 if (!stack.isEmpty() && !isShulkerBox(stack.getItem())) {
-                    for (int p : sources) {
-                        ItemStack pStack = player.getInventory().getStack(p);
-                        if (itemsMatch(stack, pStack)) {
-                            player.getInventory().setStack(p, ItemStack.EMPTY);
-                            int leftover = executeInsert(inv, pStack, pStack.getCount());
-                            if (leftover > 0) player.getInventory().setStack(p, pStack.copyWithCount(leftover));
-                        }
-                    }
+                    handleStacks(player, inv, sources, stack);
                 } else if (isShulkerBox(stack.getItem())) {
                     net.minecraft.component.type.ContainerComponent container = stack.get(net.minecraft.component.DataComponentTypes.CONTAINER);
                     if (container != null) {
                         for (ItemStack inner : container.iterateNonEmpty()) {
                             if (!inner.isEmpty()) {
-                                for (int p : sources) {
-                                    ItemStack pStack = player.getInventory().getStack(p);
-                                    if (itemsMatch(inner, pStack)) {
-                                        player.getInventory().setStack(p, ItemStack.EMPTY);
-                                        int leftover = executeInsert(inv, pStack, pStack.getCount());
-                                        if (leftover > 0) player.getInventory().setStack(p, pStack.copyWithCount(leftover));
-                                    }
-                                }
+                                handleStacks(player, inv, sources, inner);
                             }
                         }
                     }
@@ -285,13 +271,30 @@ public class StorageMutator {
         }
         else if (action.equals("IPN_REFILL_PLAYER")) {
             int[] targets = getTargetSlots(action, amountNeeded, handler.getTerminalMode());
+
+            // Step 1: Collect unique item types currently in the player's inventory to avoid double-processing
+            java.util.List<ItemStack> uniqueTypes = new java.util.ArrayList<>();
             for (int i : targets) {
                 ItemStack stack = player.getInventory().getStack(i);
-                if (!stack.isEmpty() && stack.getCount() < stack.getMaxCount()) {
-                    int needed = stack.getMaxCount() - stack.getCount();
-                    ItemStack extracted = executeExtract(inv, stack, needed);
+                if (!stack.isEmpty()) {
+                    boolean exists = false;
+                    for (ItemStack u : uniqueTypes) {
+                        if (itemsMatch(u, stack)) { exists = true; break; }
+                    }
+                    if (!exists) uniqueTypes.add(stack.copy());
+                }
+            }
+
+            // Step 2: Vacuum all available matching items from the storage for each unique type found
+            for (ItemStack uniqueType : uniqueTypes) {
+                int space = calculatePlayerSpace(player.getInventory(), uniqueType, targets);
+                if (space > 0) {
+                    ItemStack extracted = executeExtract(inv, uniqueType, space);
                     if (extracted != null && !extracted.isEmpty()) {
-                        stack.increment(extracted.getCount());
+                        insertIntoPlayer(player, extracted, targets);
+
+                        // Failsafe: Put back any absolute overflow
+                        if (extracted.getCount() > 0) executeInsert(inv, extracted, extracted.getCount());
                     }
                 }
             }
@@ -341,10 +344,18 @@ public class StorageMutator {
         );
     }
 
-    private static int[] getTargetSlots(String action, int payloadAmount, int terminalMode) {
-        if (terminalMode == 3) {
-            return new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8};
+    private static void handleStacks(ServerPlayerEntity player, Inventory inv, int[] sources, ItemStack inner) {
+        for (int p : sources) {
+            ItemStack pStack = player.getInventory().getStack(p);
+            if (itemsMatch(inner, pStack)) {
+                player.getInventory().setStack(p, ItemStack.EMPTY);
+                int leftover = executeInsert(inv, pStack.copy(), pStack.getCount());
+                if (leftover > 0) player.getInventory().setStack(p, pStack.copyWithCount(leftover));
+            }
         }
+    }
+
+    private static int[] getTargetSlots(String action, int payloadAmount, int terminalMode) {
         if (action.startsWith("IPN_") && payloadAmount == 0) {
             int[] slots = new int[27];
             for (int i = 0; i < 27; i++) slots[i] = i + 9;
@@ -357,9 +368,6 @@ public class StorageMutator {
     }
 
     private static int[] getSourceSlots(String action, int payloadAmount, int terminalMode) {
-        if (terminalMode == 3) {
-            return new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8};
-        }
         if (action.startsWith("IPN_") && payloadAmount == 0) {
             int[] slots = new int[27];
             for (int i = 0; i < 27; i++) slots[i] = i + 9;
@@ -419,6 +427,7 @@ public class StorageMutator {
     private static ItemStack executeExtract(Inventory inv, ItemStack targetStack, int amountNeeded) {
         if (targetStack.isEmpty() || amountNeeded <= 0) return ItemStack.EMPTY;
 
+        ItemStack safeReference = targetStack.copyWithCount(1);
         int extracted = 0;
 
         for (int i = 0; i < inv.size() && extracted < amountNeeded; i++) {
@@ -473,7 +482,7 @@ public class StorageMutator {
         }
 
         if (extracted > 0) {
-            return targetStack.copyWithCount(extracted);
+            return safeReference.copyWithCount(extracted);
         }
         return ItemStack.EMPTY;
     }
