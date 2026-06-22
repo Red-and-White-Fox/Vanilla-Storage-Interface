@@ -1,5 +1,6 @@
-# ~~BUSY IRL at the moment, more work will be done on the mod towards the end of June.~~
-# I'm back 👀
+### Note: IRL responsibilities quieted down for the moment so we're back to working on our Minecraft projects, including this one ^^.
+
+---
 
 # Vanilla Storage Interface Mod
 
