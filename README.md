@@ -1,4 +1,4 @@
-### Note: IRL responsibilities quieted down for the moment so we're back to working on our Minecraft projects, including this one ^^.
+### Note: IRL responsibilities don't really allow us much time to work on our Minecraft projects at the moment.
 
 ---
 
