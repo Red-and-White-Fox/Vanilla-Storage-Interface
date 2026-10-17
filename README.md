@@ -1,4 +1,4 @@
-### Note: IRL responsibilities don't really allow us much time to work on our Minecraft projects at the moment.
+### Note: IRL responsibilities don't really allow us much time to work on our Minecraft projects at the moment. We'll work, however, on updating this mod to Minecraft version 26.3.
 
 ---
 
