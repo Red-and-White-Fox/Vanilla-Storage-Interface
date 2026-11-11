@@ -116,24 +116,24 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
         }
 
         if (!isVirtual && mouseX >= ghostX && mouseX < ghostX + 18 && mouseY >= ghostY && mouseY < ghostY + 18) {
-            if (button == 1) {
+            if (button == InputConstants.MOUSE_BUTTON_RIGHT) {
                 Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
                 ClientPlayNetworking.send(new StorageActionPayload("CLEAR_DISPLAY", new ItemStack(Items.STRUCTURE_VOID), 1));
                 return true;
-            } else if (button == 2) {
+            } else if (button == InputConstants.MOUSE_BUTTON_MIDDLE) {
                 Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ITEM_FRAME_REMOVE_ITEM, 1.0F));
                 ClientPlayNetworking.send(new StorageActionPayload("RESET_DISPLAY", ItemStack.EMPTY, 0));
                 return true;
+            } else if (button == InputConstants.MOUSE_BUTTON_LEFT) {
+                Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                ItemStack cursorStack = this.getMenu().getCarried();
+                ItemStack payloadStack = cursorStack.isEmpty() ? ItemStack.EMPTY : cursorStack.copyWithCount(1);
+                ClientPlayNetworking.send(new StorageActionPayload("SET_DISPLAY", payloadStack, 1));
+                return true;
             }
-
-            Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-            ItemStack cursorStack = this.getMenu().getCarried();
-            ItemStack payloadStack = cursorStack.isEmpty() ? ItemStack.EMPTY : cursorStack.copyWithCount(1);
-            ClientPlayNetworking.send(new StorageActionPayload("SET_DISPLAY", payloadStack, 1));
-            return true;
         }
 
-        if (button == 1 && this.searchBox.isMouseOver(mouseX, mouseY)) {
+        if (button == InputConstants.MOUSE_BUTTON_RIGHT && this.searchBox.isMouseOver(mouseX, mouseY)) {
             this.searchBox.setValue("");
             return true;
         }
@@ -141,7 +141,7 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
         int startX = (this.width - this.imageWidth) / 2;
         int startY = (this.height - this.imageHeight) / 2;
 
-        if (button == 1 && mouseX >= startX + 99 && mouseX <= startX + 149 && mouseY >= startY + 19 && mouseY <= startY + 33) {
+        if (button == InputConstants.MOUSE_BUTTON_RIGHT && mouseX >= startX + 99 && mouseX <= startX + 149 && mouseY >= startY + 19 && mouseY <= startY + 33) {
             Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
             this.setSortMode(SortMode.NONE);
             return true;
@@ -164,7 +164,7 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
             if (event.hasShiftDown()) {
                 ItemStack targetSync = cursorStack.isEmpty() ? (isSlotDoubleClick ? lastShiftClickedStack : hoveredStack) : cursorStack;
 
-                if (isSlotDoubleClick && button == 0 && !targetSync.isEmpty()) {
+                if (isSlotDoubleClick && button == InputConstants.MOUSE_BUTTON_LEFT && !targetSync.isEmpty()) {
                     ClientPlayNetworking.send(new StorageActionPayload("INSERT_ALL_MATCHING", targetSync, 0));
                     this.lastShiftClickedStack = ItemStack.EMPTY;
                     return true;
@@ -179,7 +179,7 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
             }
         }
 
-        if (button != 0 && button != 1 && button != 2) return super.mouseClicked(event, doubleClick);
+        if (button != InputConstants.MOUSE_BUTTON_LEFT && button != InputConstants.MOUSE_BUTTON_RIGHT && button != InputConstants.MOUSE_BUTTON_MIDDLE) return super.mouseClicked(event, doubleClick);
 
         boolean overVirtualGrid = mouseX >= startX + 8 && mouseX < startX + 8 + (COLUMNS * 18) && mouseY >= startY + 36 && mouseY < startY + 36 + (ROWS * 18);
         ItemStack cursorStack = this.getMenu().getCarried();
@@ -190,7 +190,7 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
             int row = (int) (mouseY - (startY + 36)) / 18;
             int gridId = (scrollOffset * COLUMNS) + (row * COLUMNS) + col + 1000;
 
-            if (button == 2 && hoveredItem != null && !cursorStack.isEmpty() && ItemStack.isSameItemSameComponents(cursorStack, hoveredItem)) {
+            if (button == InputConstants.MOUSE_BUTTON_MIDDLE && hoveredItem != null && !cursorStack.isEmpty() && ItemStack.isSameItemSameComponents(cursorStack, hoveredItem)) {
                 int needed = cursorStack.getMaxStackSize() - cursorStack.getCount();
                 if (needed > 0) {
                     Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
@@ -199,16 +199,16 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
                 }
             }
 
-            if (button == 0 || button == 1) {
+            if (button == InputConstants.MOUSE_BUTTON_LEFT || button == InputConstants.MOUSE_BUTTON_RIGHT) {
                 if (!cursorStack.isEmpty()) {
                     this.lastSwipedSlotId = gridId; // Record virtual slot interaction
                     Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                    ClientPlayNetworking.send(new StorageActionPayload("INSERT_CURSOR", ItemStack.EMPTY, (button == 0) ? cursorStack.getCount() : 1));
+                    ClientPlayNetworking.send(new StorageActionPayload("INSERT_CURSOR", ItemStack.EMPTY, (button == InputConstants.MOUSE_BUTTON_LEFT) ? cursorStack.getCount() : 1));
                     return true;
                 } else if (hoveredItem != null) {
                     this.lastSwipedSlotId = gridId; // Record virtual slot interaction
                     Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                    ClientPlayNetworking.send(new StorageActionPayload(event.hasShiftDown() ? "SHIFT_EXTRACT" : "EXTRACT", hoveredItem, (button == 0) ? hoveredItem.getMaxStackSize() : 1));
+                    ClientPlayNetworking.send(new StorageActionPayload(event.hasShiftDown() ? "SHIFT_EXTRACT" : "EXTRACT", hoveredItem, (button == InputConstants.MOUSE_BUTTON_LEFT) ? hoveredItem.getMaxStackSize() : 1));
                     this.pauseSortingTime = Util.getMillis() + 1500;
                     return true;
                 }
@@ -321,53 +321,75 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
             this.setFocused(null);
         }).bounds(startX + 135, startY + 19, 14, 14).build());
 
-        updateSearch("");
+        if (VanillaStorageInterface.CONFIG.autoFocusSearchBar) {
+            this.searchBox.setFocused(true);
+            this.setFocused(this.searchBox);
+        }
 
-        if (VanillaStorageInterfaceClient.savedMouseX != -1) {
+        if (VanillaStorageInterfaceClient.savedMouseX != -1 && VanillaStorageInterfaceClient.savedMouseY != -1) {
             SDLMouse.SDL_WarpMouseInWindow(this.minecraft.getWindow().handle(), (float) VanillaStorageInterfaceClient.savedMouseX, (float) VanillaStorageInterfaceClient.savedMouseY);
             VanillaStorageInterfaceClient.savedMouseX = -1;
             VanillaStorageInterfaceClient.savedMouseY = -1;
         }
+
+        this.refresh();
     }
 
     private void setSortMode(SortMode mode) {
         this.currentSortMode = mode;
         VanillaStorageInterface.CONFIG.lastSortMode = mode.ordinal();
         AutoConfig.getConfigHolder(VanillaStorageConfig.class).save();
+        this.pauseSortingTime = 0;
         this.refresh();
     }
 
     public void refresh() {
-        if (Util.getMillis() < this.pauseSortingTime) {
-            for (int i = 0; i < this.filteredItems.size(); i++) {
-                VirtualItem oldItem = this.filteredItems.get(i);
+        String query = this.searchBox != null ? this.searchBox.getValue().toLowerCase() : "";
+
+        // Freeze Phase: Update stack counts in-place without scrambling grid locations
+        if (Util.getMillis() < this.pauseSortingTime && !this.filteredItems.isEmpty()) {
+            List<VirtualItem> updatedFiltered = new ArrayList<>();
+
+            // 1. Update existing items in their current grid slots
+            for (VirtualItem oldItem : this.filteredItems) {
                 int newCount = 0;
-                for (VirtualItem vi : this.virtualItems) {
-                    if (ItemStack.isSameItemSameComponents(vi.stack(), oldItem.stack())) {
-                        newCount = vi.count();
+                for (VirtualItem freshItem : this.virtualItems) {
+                    if (ItemStack.isSameItemSameComponents(oldItem.stack(), freshItem.stack())) {
+                        newCount = freshItem.count();
                         break;
                     }
                 }
-                this.filteredItems.set(i, new VirtualItem(oldItem.stack(), newCount));
+                if (newCount > 0) {
+                    updatedFiltered.add(new VirtualItem(oldItem.stack(), newCount));
+                }
             }
-            this.filteredItems.removeIf(vi -> vi.count() <= 0);
 
-            String currentQuery = this.searchBox != null ? this.searchBox.getValue() : "";
-            for (VirtualItem vi : this.virtualItems) {
+            // 2. Append any newly added items to the very end
+            for (VirtualItem freshItem : this.virtualItems) {
+                if (!matchesSearch(freshItem, query)) continue;
+
                 boolean exists = false;
-                for (VirtualItem existing : this.filteredItems) {
-                    if (ItemStack.isSameItemSameComponents(vi.stack(), existing.stack())) {
+                for (VirtualItem existing : updatedFiltered) {
+                    if (ItemStack.isSameItemSameComponents(existing.stack(), freshItem.stack())) {
                         exists = true;
                         break;
                     }
                 }
-                if (!exists && matchesSearch(vi, currentQuery)) {
-                    this.filteredItems.add(vi);
+                if (!exists) {
+                    updatedFiltered.add(freshItem);
                 }
             }
+
+            this.filteredItems = updatedFiltered;
             return;
         }
-        if (this.searchBox != null) this.updateSearch(this.searchBox.getValue());
+
+        // Standard Phase: Full sort and filter
+        if (this.searchBox != null) {
+            this.updateSearch(this.searchBox.getValue());
+        } else {
+            this.updateSearch("");
+        }
     }
 
     private String getPrimaryEnchantmentName(ItemStack stack, String defaultName) {
@@ -431,7 +453,7 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
 
-        extractor.blit(RenderPipelines.GUI_TEXTURED, isVirtualTerminal() ? TEXTURE_VIRTUAL : TEXTURE, x, y, 0.0f, 0.0f, this.imageWidth, this.imageHeight, 256, 256);
+        extractor.blit(RenderPipelines.GUI_TEXTURED, isVirtualTerminal() ? TEXTURE_VIRTUAL : TEXTURE, x, y, 0.0f, 0.0f, this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
 
         int highlightX = 0;
         switch (currentSortMode) {
@@ -449,21 +471,33 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
     public void extractContents(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float delta) {
         super.extractContents(extractor, mouseX, mouseY, delta);
 
-        int x = (this.width - this.imageWidth) / 2;
-        int y = (this.height - this.imageHeight) / 2;
+        int startX = (this.width - this.imageWidth) / 2;
+        int startY = (this.height - this.imageHeight) / 2;
+
+        if (isVirtualTerminal()) {
+            extractor.text(this.font, this.title, startX + 8, startY + 6, this.titleColor);
+        }
+
+        if (this.emptyShulkerSlots > 0) {
+            String boxInfo = "+" + this.emptyShulkerSlots;
+            int textWidth = this.font.width(boxInfo);
+            extractor.text(this.font, boxInfo, startX + this.imageWidth - textWidth - 8, startY + 6, 0xAAAAAA);
+        }
 
         if (!isVirtualTerminal()) {
-            ItemStack displayItem = getGhostSlotItem();
-            if (!displayItem.isEmpty() && !displayItem.is(Items.STRUCTURE_VOID)) {
-                extractor.fakeItem(displayItem, ghostX, ghostY);
+            ItemStack displayStack = getGhostSlotItem();
+            if (!displayStack.isEmpty() && !displayStack.is(Items.STRUCTURE_VOID)) {
+                extractor.item(displayStack, ghostX, ghostY);
             }
             if (mouseX >= ghostX && mouseX < ghostX + 16 && mouseY >= ghostY && mouseY < ghostY + 16) {
                 extractor.fill(ghostX, ghostY, ghostX + 16, ghostY + 16, 0x80FFFFFF);
             }
         }
 
-        int startX = x + 8;
-        int startY = y + 36;
+        renderVirtualGrid(extractor, startX + 8, startY + 36, mouseX, mouseY);
+    }
+
+    private void renderVirtualGrid(GuiGraphicsExtractor extractor, int startX, int startY, int mouseX, int mouseY) {
         int index = scrollOffset * COLUMNS;
 
         for (int row = 0; row < ROWS; row++) {
@@ -520,7 +554,7 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
         double mouseY = event.y();
         int button = event.button();
 
-        if (button == 0 && event.hasShiftDown() && this.getMenu().getCarried().isEmpty()) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && event.hasShiftDown() && this.getMenu().getCarried().isEmpty()) {
             if (this.hoveredSlot != null && this.hoveredSlot.container instanceof Inventory) {
                 if (this.hoveredSlot.index != this.lastSwipedSlotId && this.hoveredSlot.hasItem()) {
                     this.lastSwipedSlotId = this.hoveredSlot.index;
@@ -556,7 +590,7 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        if (event.button() == 0) this.lastSwipedSlotId = -1;
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) this.lastSwipedSlotId = -1;
         return super.mouseReleased(event);
     }
 
@@ -607,10 +641,25 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
         return super.keyPressed(event);
     }
 
+    private boolean isModifierActive(int modKey) {
+        if (modKey == -1) return false;
+        Minecraft mc = Minecraft.getInstance();
+        if (modKey == InputConstants.KEY_LSHIFT || modKey == InputConstants.KEY_RSHIFT) {
+            return mc.hasShiftDown() || InputConstants.isKeyDown(modKey);
+        }
+        if (modKey == InputConstants.KEY_LCONTROL || modKey == InputConstants.KEY_RCONTROL) {
+            return mc.hasControlDown() || InputConstants.isKeyDown(modKey);
+        }
+        if (modKey == InputConstants.KEY_LALT || modKey == InputConstants.KEY_RALT) {
+            return mc.hasAltDown() || InputConstants.isKeyDown(modKey);
+        }
+        return InputConstants.isKeyDown(modKey);
+    }
+
     private void executeIpnAction(double mouseX, double mouseY) {
-        boolean hasMatchMod = InputConstants.isKeyDown(IpnCompatWrapper.moveMatchMod) && IpnCompatWrapper.moveMatchMod != -1;
-        boolean hasAllMod = InputConstants.isKeyDown(IpnCompatWrapper.moveAllMod) && IpnCompatWrapper.moveAllMod != -1;
-        boolean hasHotbarMod = InputConstants.isKeyDown(IpnCompatWrapper.includeHotbarMod) && IpnCompatWrapper.includeHotbarMod != -1;
+        boolean hasMatchMod = isModifierActive(IpnCompatWrapper.moveMatchMod);
+        boolean hasAllMod = isModifierActive(IpnCompatWrapper.moveAllMod);
+        boolean hasHotbarMod = isModifierActive(IpnCompatWrapper.includeHotbarMod);
 
         int hotbarFlag = hasHotbarMod ? 1 : 0;
 
@@ -656,10 +705,10 @@ public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInter
         }
 
         if (!this.searchBox.isFocused() && VanillaStorageInterface.CONFIG.ipnHasPriorityOverAutoFocus) {
-            if ((IpnCompatWrapper.triggerKey != -1 && InputConstants.isKeyDown(IpnCompatWrapper.triggerKey)) ||
-                    (IpnCompatWrapper.moveAllMod != -1 && InputConstants.isKeyDown(IpnCompatWrapper.moveAllMod)) ||
-                    (IpnCompatWrapper.moveMatchMod != -1 && InputConstants.isKeyDown(IpnCompatWrapper.moveMatchMod)) ||
-                    (IpnCompatWrapper.includeHotbarMod != -1 && InputConstants.isKeyDown(IpnCompatWrapper.includeHotbarMod))) {
+            if ((IpnCompatWrapper.triggerKey != -1 && isModifierActive(IpnCompatWrapper.triggerKey)) ||
+                    (IpnCompatWrapper.moveAllMod != -1 && isModifierActive(IpnCompatWrapper.moveAllMod)) ||
+                    (IpnCompatWrapper.moveMatchMod != -1 && isModifierActive(IpnCompatWrapper.moveMatchMod)) ||
+                    (IpnCompatWrapper.includeHotbarMod != -1 && isModifierActive(IpnCompatWrapper.includeHotbarMod))) {
                 return false;
             }
         }

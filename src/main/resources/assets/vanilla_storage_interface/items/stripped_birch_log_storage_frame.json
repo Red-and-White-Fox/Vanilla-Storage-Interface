@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "vanilla_storage_interface:item/stripped_birch_log_storage_frame"
+  }
+}

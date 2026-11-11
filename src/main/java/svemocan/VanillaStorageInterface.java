@@ -7,8 +7,10 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.item.BlockItem;
@@ -82,18 +84,25 @@ public class VanillaStorageInterface implements ModInitializer {
         // Data-driven iteration loop: dynamically populates registries across all material targets
         // to minimize boilerplate registration footprints.
         for (String wood : MATERIAL_TYPES) {
-            Item frameItem = new Item(new Item.Properties());
-            Registry.register(BuiltInRegistries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, wood + "_storage_frame"), frameItem);
+            Identifier frameId = Identifier.fromNamespaceAndPath(MOD_ID, wood + "_storage_frame");
+            ResourceKey<Item> frameKey = ResourceKey.create(Registries.ITEM, frameId);
+            Item frameItem = new Item(new Item.Properties().setId(frameKey));
+            Registry.register(BuiltInRegistries.ITEM, frameKey, frameItem);
+
+            Identifier blockId = Identifier.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface");
+            ResourceKey<Block> blockKey = ResourceKey.create(Registries.BLOCK, blockId);
+            ResourceKey<Item> blockItemKey = ResourceKey.create(Registries.ITEM, blockId);
 
             Block interfaceBlock = new StorageInterfaceBlock(
                     BlockBehaviour.Properties.of()
+                            .setId(blockKey)
                             .strength(2.5f, 2.5f)
                             .requiresCorrectToolForDrops()
                             .noOcclusion()
                             .lightLevel(state -> state.getValue(StorageInterfaceBlock.ILLUMINATED) ? 10 : 0)
             );
-            Registry.register(BuiltInRegistries.BLOCK, Identifier.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface"), interfaceBlock);
-            Registry.register(BuiltInRegistries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface"), new BlockItem(interfaceBlock, new Item.Properties()));
+            Registry.register(BuiltInRegistries.BLOCK, blockKey, interfaceBlock);
+            Registry.register(BuiltInRegistries.ITEM, blockItemKey, new BlockItem(interfaceBlock, new Item.Properties().setId(blockItemKey).useBlockDescriptionPrefix()));
 
             INTERFACE_BLOCKS.put(wood, interfaceBlock);
         }
@@ -142,6 +151,8 @@ public class VanillaStorageInterface implements ModInitializer {
                 }
                 else if (payload.mode() == 2 && CONFIG.enableBoxTerminal) {
                     int targetIndex = payload.targetId();
+                    if (targetIndex < 0 || targetIndex >= player.getInventory().getContainerSize()) return;
+
                     net.minecraft.world.item.ItemStack targetShulker = player.getInventory().getItem(targetIndex);
 
                     if (StorageMutator.isShulkerBox(targetShulker.getItem())) {
@@ -185,14 +196,17 @@ public class VanillaStorageInterface implements ModInitializer {
                             net.minecraft.world.inventory.ChestMenu.threeRows(syncId, inv, player.getEnderChestInventory()), Component.literal("Raw Void Storage")));
                 }
                 else if (payload.mode() == 2 && CONFIG.enableBoxRaw) {
-                    net.minecraft.world.item.ItemStack targetShulker = player.getInventory().getItem(payload.targetId());
+                    int targetIndex = payload.targetId();
+                    if (targetIndex < 0 || targetIndex >= player.getInventory().getContainerSize()) return;
+
+                    net.minecraft.world.item.ItemStack targetShulker = player.getInventory().getItem(targetIndex);
                     if (StorageMutator.isShulkerBox(targetShulker.getItem())) {
                         if (targetShulker.getCount() > 1) {
                             int emptySlot = player.getInventory().getFreeSlot();
                             if (emptySlot != -1) {
                                 ItemStack singleBox = targetShulker.copyWithCount(1);
                                 ItemStack leftover = targetShulker.copyWithCount(targetShulker.getCount() - 1);
-                                player.getInventory().setItem(payload.targetId(), singleBox);
+                                player.getInventory().setItem(targetIndex, singleBox);
                                 player.getInventory().setItem(emptySlot, leftover);
                                 targetShulker = singleBox;
                             } else {
@@ -215,7 +229,9 @@ public class VanillaStorageInterface implements ModInitializer {
         PayloadTypeRegistry.serverboundPlay().register(StorageActionPayload.ID, StorageActionPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(StorageActionPayload.ID, (payload, context) -> {
-            context.server().execute(() -> StorageMutator.handleAction(context.player(), payload));
+            context.server().execute(() -> {
+                StorageMutator.handleAction(context.player(), payload);
+            });
         });
     }
 }

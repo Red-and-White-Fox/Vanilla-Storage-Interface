@@ -115,6 +115,7 @@
   "item.vanilla_storage_interface.black_stained_glass_storage_frame": "Black Stained Glass Storage Frame",
 
   "category.vanilla_storage.keys": "Vanilla Storage Interface",
+  "key.category.vanilla_storage.keys": "Vanilla Storage Interface",
   "key.vanilla_storage.open_void": "Open Void Terminal",
   "key.vanilla_storage.open_hover": "Open Hovered Shulker Terminal",
   "key.vanilla_storage.open_held": "Open Held Shulker Terminal",

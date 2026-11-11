@@ -85,8 +85,14 @@ public class StorageInterfaceBlockEntityRenderer implements BlockEntityRenderer<
             case SOUTH -> {}
             case WEST  -> poseStack.rotateDegrees(Axis.YP, -90.0f);
             case EAST  -> poseStack.rotateDegrees(Axis.YP, 90.0f);
-            case UP    -> poseStack.rotateDegrees(Axis.XP, 90.0f);
-            case DOWN  -> poseStack.rotateDegrees(Axis.XP, -90.0f);
+            case UP    -> {
+                poseStack.rotateDegrees(Axis.YP, 180.0f);
+                poseStack.rotateDegrees(Axis.XP, 90.0f);
+            }
+            case DOWN  -> {
+                poseStack.rotateDegrees(Axis.YP, 180.0f);
+                poseStack.rotateDegrees(Axis.XP, -90.0f);
+            }
         }
 
         if (renderState.rotation != 0.0f) {

@@ -2,8 +2,10 @@ package svemocan.vanilla_storage_interface;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -80,9 +82,7 @@ public class StorageInterfaceBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
-        net.minecraft.world.item.ItemStack handStack = player.getItemInHand(player.getUsedItemHand());
-
+    protected InteractionResult useItemOn(ItemStack handStack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         // Decorative/Utility triggers: Handles visual panel illumination adjustments
         if (handStack.is(net.minecraft.world.item.Items.GLOW_INK_SAC) && !state.getValue(ILLUMINATED)) {
             world.setBlock(pos, state.setValue(ILLUMINATED, true), 3);
@@ -94,7 +94,11 @@ public class StorageInterfaceBlock extends Block implements EntityBlock {
             world.playSound(null, pos, net.minecraft.sounds.SoundEvents.SPONGE_ABSORB, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
             return InteractionResult.SUCCESS;
         }
+        return super.useItemOn(handStack, state, world, pos, player, hand, hit);
+    }
 
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
         if (!world.isClientSide()) {
             net.minecraft.core.Direction facing = state.getValue(FACING);
             net.minecraft.core.BlockPos attachedPos = pos.relative(facing.getOpposite());

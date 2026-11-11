@@ -6,19 +6,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class IpnCompatWrapper {
-    public static int triggerKey = 32; // GLFW_KEY_SPACE
+    // Minecraft 26.3 uses SDL key scancodes (Space=44, LShift=225, LCtrl=224, LAlt=226)
+    public static int triggerKey = 44; // KEY_SPACE
     public static int triggerMouse = -1;
-    public static int moveAllMod = 340; // GLFW_KEY_LEFT_SHIFT
-    public static int moveMatchMod = 341; // GLFW_KEY_LEFT_CONTROL
-    public static int includeHotbarMod = 342; // GLFW_KEY_LEFT_ALT
+    public static int moveAllMod = 225; // KEY_LSHIFT
+    public static int moveMatchMod = 224; // KEY_LCONTROL
+    public static int includeHotbarMod = 226; // KEY_LALT
 
     public static void updateKeys() {
         // 1. Set the standard IPN Defaults initially
-        triggerKey = 32;
+        triggerKey = 44;
         triggerMouse = -1;
-        moveAllMod = 340;
-        moveMatchMod = 341;
-        includeHotbarMod = 342;
+        moveAllMod = 225;
+        moveMatchMod = 224;
+        includeHotbarMod = 226;
 
         if (!FabricLoader.getInstance().isModLoaded("inventoryprofilesnext")) {
             return; // Soft Dependency: Ignore completely if IPN is not installed
@@ -79,9 +80,9 @@ public class IpnCompatWrapper {
 
                 if (json.has("ModSettings")) {
                     com.google.gson.JsonObject settings = json.getAsJsonObject("ModSettings");
-                    if (settings.has("move_all_modifier")) moveAllMod = mapToGlfw(settings.getAsJsonObject("move_all_modifier").get("keys").getAsString().split(",")[0]);
-                    if (settings.has("move_focus_mach_modifier")) moveMatchMod = mapToGlfw(settings.getAsJsonObject("move_focus_mach_modifier").get("keys").getAsString().split(",")[0]);
-                    if (settings.has("include_hotbar_modifier")) includeHotbarMod = mapToGlfw(settings.getAsJsonObject("include_hotbar_modifier").get("keys").getAsString().split(",")[0]);
+                    if (settings.has("move_all_modifier")) moveAllMod = mapToKey(settings.getAsJsonObject("move_all_modifier").get("keys").getAsString().split(",")[0]);
+                    if (settings.has("move_focus_mach_modifier")) moveMatchMod = mapToKey(settings.getAsJsonObject("move_focus_mach_modifier").get("keys").getAsString().split(",")[0]);
+                    if (settings.has("include_hotbar_modifier")) includeHotbarMod = mapToKey(settings.getAsJsonObject("include_hotbar_modifier").get("keys").getAsString().split(",")[0]);
                 }
             }
         } catch (Exception ignored) {}
@@ -90,7 +91,7 @@ public class IpnCompatWrapper {
     private static void parseModifierObj(Object obj, int type) {
         try {
             String str = obj.getClass().getMethod("getConfigString").invoke(obj).toString();
-            int key = mapToGlfw(str.split(",")[0]);
+            int key = mapToKey(str.split(",")[0]);
             if (type == 1) moveAllMod = key;
             else if (type == 2) moveMatchMod = key;
             else if (type == 3) includeHotbarMod = key;
@@ -109,31 +110,32 @@ public class IpnCompatWrapper {
         String finalKey = parts[parts.length - 1].trim().toUpperCase();
         if (finalKey.startsWith("BUTTON_")) {
             try {
-                triggerMouse = Integer.parseInt(finalKey.replace("BUTTON_", "")) - 1;
+                triggerMouse = Integer.parseInt(finalKey.replace("BUTTON_", ""));
                 triggerKey = -1;
             } catch (Exception ignored) {}
         } else {
-            triggerKey = mapToGlfw(finalKey);
+            triggerKey = mapToKey(finalKey);
             triggerMouse = -1;
         }
     }
 
-    private static int mapToGlfw(String key) {
+    private static int mapToKey(String key) {
         key = key.trim().toUpperCase();
         if (key.startsWith("BUTTON_")) return -1;
         return switch (key) {
-            case "LEFT_ALT" -> 342; // GLFW_KEY_LEFT_ALT
-            case "RIGHT_ALT" -> 346; // GLFW_KEY_RIGHT_ALT
-            case "LEFT_CONTROL" -> 341; // GLFW_KEY_LEFT_CONTROL
-            case "RIGHT_CONTROL" -> 345; // GLFW_KEY_RIGHT_CONTROL
-            case "LEFT_SHIFT" -> 340; // GLFW_KEY_LEFT_SHIFT
-            case "RIGHT_SHIFT" -> 344; // GLFW_KEY_RIGHT_SHIFT
-            case "CAPS_LOCK" -> 280; // GLFW_KEY_CAPS_LOCK
-            case "SPACE" -> 32; // GLFW_KEY_SPACE
+            case "LEFT_ALT" -> 226; // KEY_LALT
+            case "RIGHT_ALT" -> 230; // KEY_RALT
+            case "LEFT_CONTROL" -> 224; // KEY_LCONTROL
+            case "RIGHT_CONTROL" -> 228; // KEY_RCONTROL
+            case "LEFT_SHIFT" -> 225; // KEY_LSHIFT
+            case "RIGHT_SHIFT" -> 229; // KEY_RSHIFT
+            case "CAPS_LOCK" -> 57; // KEY_CAPSLOCK
+            case "SPACE" -> 44; // KEY_SPACE
+            case "TAB" -> 43; // KEY_TAB
             case "NONE" -> -1;
             default -> {
                 if (key.length() == 1 && key.charAt(0) >= 'A' && key.charAt(0) <= 'Z') {
-                    yield 65 + (key.charAt(0) - 'A'); // GLFW_KEY_A
+                    yield 4 + (key.charAt(0) - 'A'); // KEY_A = 4
                 }
                 yield -1;
             }

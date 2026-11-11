@@ -3,6 +3,7 @@ package svemocan.client.mixin;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -42,6 +43,9 @@ public abstract class HandledScreenMixin {
                 }
 
                 if (hoveredItem.getItem() instanceof net.minecraft.world.item.BlockItem blockItem && blockItem.getBlock() instanceof net.minecraft.world.level.block.ShulkerBoxBlock) {
+                    if (!(this.hoveredSlot.container instanceof Inventory)) {
+                        return; // Remote terminal opening is strictly supported for Shulkers located within player inventory
+                    }
 
                     // Capture current mouse coordinates so the custom UI can correctly restore the cursor position or align its elements upon opening
                     net.minecraft.client.Minecraft clientInstance = net.minecraft.client.Minecraft.getInstance();

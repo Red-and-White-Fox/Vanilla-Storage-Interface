@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LLL",
+    "L L",
+    "LLL"
+  ],
+  "key": {
+    "L": "minecraft:stripped_bamboo_block"
+  },
+  "result": {
+    "id": "vanilla_storage_interface:stripped_bamboo_block_storage_frame",
+    "count": 16
+  }
+}

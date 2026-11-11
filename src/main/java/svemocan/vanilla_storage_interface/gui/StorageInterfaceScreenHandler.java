@@ -132,6 +132,19 @@ public class StorageInterfaceScreenHandler extends AbstractContainerMenu {
             ItemStack stackInSlot = slot.getItem();
             ItemStack originalStack = stackInSlot.copy();
 
+            if (this.terminalMode == 3 && slotIndex < 27) {
+                // In Mode 3, clicking slots 0-26 (player main inventory 9-35) quick-moves them into hotbar (slots 27-35)
+                if (!this.moveItemStackTo(stackInSlot, 27, 36, false)) {
+                    return ItemStack.EMPTY;
+                }
+                if (stackInSlot.isEmpty()) {
+                    slot.setByPlayer(ItemStack.EMPTY);
+                } else {
+                    slot.setChanged();
+                }
+                return originalStack;
+            }
+
             slot.set(ItemStack.EMPTY);
 
             boolean inserted = svemocan.vanilla_storage_interface.StorageMutator.insertDirectly(
