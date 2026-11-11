@@ -1,10 +1,10 @@
 package svemocan.client.mixin;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -14,25 +14,25 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import svemocan.VanillaStorageInterface;
 import svemocan.client.VanillaStorageInterfaceClient;
 
-@Mixin(HandledScreen.class)
+@Mixin(AbstractContainerScreen.class)
 public abstract class HandledScreenMixin {
 
-    @Shadow @Nullable protected Slot focusedSlot;
+    @Shadow @Nullable protected Slot hoveredSlot;
 
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     private void onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
-        if (VanillaStorageInterfaceClient.openHoverKey.matchesKey(keyCode, scanCode)) {
+        if (VanillaStorageInterfaceClient.openHoverKey.matches(keyCode, scanCode)) {
 
-            if (this.focusedSlot != null && this.focusedSlot.hasStack()) {
-                ItemStack hoveredItem = this.focusedSlot.getStack();
+            if (this.hoveredSlot != null && this.hoveredSlot.hasItem()) {
+                ItemStack hoveredItem = this.hoveredSlot.getItem();
 
-                boolean isShift = net.minecraft.client.gui.screen.Screen.hasShiftDown();
+                boolean isShift = net.minecraft.client.gui.screens.Screen.hasShiftDown();
                 boolean invert = VanillaStorageInterface.CONFIG.invertShiftModifiers;
 
                 // Determines which UI to open. If invert config is true, pressing the key WITHOUT shift triggers RawUI instead.
                 boolean wantsRawUI = invert ? !isShift : isShift;
 
-                if (hoveredItem.isOf(Items.ENDER_CHEST)) {
+                if (hoveredItem.is(Items.ENDER_CHEST)) {
                     ClientPlayNetworking.send(wantsRawUI ? new svemocan.vanilla_storage_interface.network.OpenRawUIPayload(1, -1) : new svemocan.vanilla_storage_interface.network.OpenTerminalPayload(1, -1));
 
                     // Canceling the callback sets the return value and prevents vanilla's default key press logic from firing underneath our UI
@@ -40,14 +40,14 @@ public abstract class HandledScreenMixin {
                     return;
                 }
 
-                if (hoveredItem.getItem() instanceof net.minecraft.item.BlockItem blockItem && blockItem.getBlock() instanceof net.minecraft.block.ShulkerBoxBlock) {
+                if (hoveredItem.getItem() instanceof net.minecraft.world.item.BlockItem blockItem && blockItem.getBlock() instanceof net.minecraft.world.level.block.ShulkerBoxBlock) {
 
                     // Capture current mouse coordinates so the custom UI can correctly restore the cursor position or align its elements upon opening
-                    net.minecraft.client.MinecraftClient clientInstance = net.minecraft.client.MinecraftClient.getInstance();
-                    VanillaStorageInterfaceClient.savedMouseX = clientInstance.mouse.getX();
-                    VanillaStorageInterfaceClient.savedMouseY = clientInstance.mouse.getY();
+                    net.minecraft.client.Minecraft clientInstance = net.minecraft.client.Minecraft.getInstance();
+                    VanillaStorageInterfaceClient.savedMouseX = clientInstance.mouseHandler.xpos();
+                    VanillaStorageInterfaceClient.savedMouseY = clientInstance.mouseHandler.ypos();
 
-                    ClientPlayNetworking.send(wantsRawUI ? new svemocan.vanilla_storage_interface.network.OpenRawUIPayload(2, this.focusedSlot.getIndex()) : new svemocan.vanilla_storage_interface.network.OpenTerminalPayload(2, this.focusedSlot.getIndex()));
+                    ClientPlayNetworking.send(wantsRawUI ? new svemocan.vanilla_storage_interface.network.OpenRawUIPayload(2, this.hoveredSlot.getContainerSlot()) : new svemocan.vanilla_storage_interface.network.OpenTerminalPayload(2, this.hoveredSlot.getContainerSlot()));
                     cir.setReturnValue(true);
                     return;
                 }

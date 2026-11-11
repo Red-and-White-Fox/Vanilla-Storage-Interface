@@ -5,17 +5,17 @@ import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel;
 import net.fabricmc.fabric.api.renderer.v1.render.RenderContext;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.model.BakedModel;
-import net.minecraft.client.render.model.BakedQuad;
-import net.minecraft.client.render.model.json.ModelOverrideList;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.BlockRenderView;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.ItemOverrides;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import svemocan.VanillaStorageInterface;
@@ -38,7 +38,7 @@ public class StorageInterfaceBakedModel implements BakedModel, FabricBakedModel 
     }
 
     @Override
-    public void emitBlockQuads(BlockRenderView blockView, BlockState state, BlockPos pos, Supplier<net.minecraft.util.math.random.Random> randomSupplier, RenderContext context) {
+    public void emitBlockQuads(BlockAndTintGetter blockView, BlockState state, BlockPos pos, Supplier<net.minecraft.util.RandomSource> randomSupplier, RenderContext context) {
         // Render the underlying block's geometry first before dealing with the dynamic item overlay
         ((FabricBakedModel) this.baseModel).emitBlockQuads(blockView, state, pos, randomSupplier, context);
 
@@ -48,9 +48,9 @@ public class StorageInterfaceBakedModel implements BakedModel, FabricBakedModel 
         if (blockEntity instanceof StorageInterfaceBlockEntity interfaceEntity) {
             ItemStack displayStack = interfaceEntity.getDisplayItem();
 
-            if (displayStack != null && !displayStack.isEmpty() && !displayStack.isOf(net.minecraft.item.Items.STRUCTURE_VOID)) {
-                BakedModel itemModel = MinecraftClient.getInstance().getItemRenderer().getModel(displayStack, null, null, 0);
-                Direction facing = state.contains(StorageInterfaceBlock.FACING) ? state.get(StorageInterfaceBlock.FACING) : Direction.NORTH;
+            if (displayStack != null && !displayStack.isEmpty() && !displayStack.is(net.minecraft.world.item.Items.STRUCTURE_VOID)) {
+                BakedModel itemModel = Minecraft.getInstance().getItemRenderer().getModel(displayStack, null, null, 0);
+                Direction facing = state.hasProperty(StorageInterfaceBlock.FACING) ? state.getValue(StorageInterfaceBlock.FACING) : Direction.NORTH;
 
                 // ==========================================
                 // TUNING VARIABLES
@@ -60,14 +60,14 @@ public class StorageInterfaceBakedModel implements BakedModel, FabricBakedModel 
 
                 // Grab the exact Matrix Minecraft uses to flatten swords/fences into item frames natively.
                 // This ensures non-standard item models lie flat against the interface.
-                net.minecraft.client.render.model.json.ModelTransformation transformation = itemModel.getTransformation();
-                net.minecraft.client.render.model.json.Transformation fixed = transformation.fixed;
+                net.minecraft.client.renderer.block.model.ItemTransforms transformation = itemModel.getTransforms();
+                net.minecraft.client.renderer.block.model.ItemTransform fixed = transformation.fixed;
                 Matrix4f fixedMatrix = null;
 
-                if (fixed != null && fixed != net.minecraft.client.render.model.json.Transformation.IDENTITY) {
-                    net.minecraft.client.util.math.MatrixStack dummyStack = new net.minecraft.client.util.math.MatrixStack();
+                if (fixed != null && fixed != net.minecraft.client.renderer.block.model.ItemTransform.NO_TRANSFORM) {
+                    com.mojang.blaze3d.vertex.PoseStack dummyStack = new com.mojang.blaze3d.vertex.PoseStack();
                     fixed.apply(false, dummyStack);
-                    fixedMatrix = dummyStack.peek().getPositionMatrix();
+                    fixedMatrix = dummyStack.last().pose();
                 }
 
                 QuadEmitter emitter = context.getEmitter();
@@ -108,9 +108,9 @@ public class StorageInterfaceBakedModel implements BakedModel, FabricBakedModel 
                                 case DOWN  -> { vec.rotateY((float) Math.PI); vec.rotateX((float) (-Math.PI / 2)); }
                             }
 
-                            vec.add(0.5f + facing.getOffsetX() * GLASS_DEPTH_OFFSET,
-                                    0.5f + facing.getOffsetY() * GLASS_DEPTH_OFFSET,
-                                    0.5f + facing.getOffsetZ() * GLASS_DEPTH_OFFSET);
+                            vec.add(0.5f + facing.getStepX() * GLASS_DEPTH_OFFSET,
+                                    0.5f + facing.getStepY() * GLASS_DEPTH_OFFSET,
+                                    0.5f + facing.getStepZ() * GLASS_DEPTH_OFFSET);
 
                             emitter.pos(i, vec.x, vec.y, vec.z);
                         }
@@ -125,16 +125,16 @@ public class StorageInterfaceBakedModel implements BakedModel, FabricBakedModel 
     }
 
     @Override
-    public void emitItemQuads(ItemStack stack, Supplier<net.minecraft.util.math.random.Random> randomSupplier, RenderContext context) {
+    public void emitItemQuads(ItemStack stack, Supplier<net.minecraft.util.RandomSource> randomSupplier, RenderContext context) {
         ((FabricBakedModel) this.baseModel).emitItemQuads(stack, randomSupplier, context);
     }
 
-    @Override public List<BakedQuad> getQuads(BlockState state, Direction face, net.minecraft.util.math.random.Random random) { return baseModel.getQuads(state, face, random); }
+    @Override public List<BakedQuad> getQuads(BlockState state, Direction face, net.minecraft.util.RandomSource random) { return baseModel.getQuads(state, face, random); }
     @Override public boolean useAmbientOcclusion() { return baseModel.useAmbientOcclusion(); }
-    @Override public boolean hasDepth() { return baseModel.hasDepth(); }
-    @Override public boolean isSideLit() { return baseModel.isSideLit(); }
-    @Override public boolean isBuiltin() { return baseModel.isBuiltin(); }
-    @Override public Sprite getParticleSprite() { return baseModel.getParticleSprite(); }
-    @Override public net.minecraft.client.render.model.json.ModelTransformation getTransformation() { return baseModel.getTransformation(); }
-    @Override public ModelOverrideList getOverrides() { return baseModel.getOverrides(); }
+    @Override public boolean isGui3d() { return baseModel.isGui3d(); }
+    @Override public boolean usesBlockLight() { return baseModel.usesBlockLight(); }
+    @Override public boolean isCustomRenderer() { return baseModel.isCustomRenderer(); }
+    @Override public TextureAtlasSprite getParticleIcon() { return baseModel.getParticleIcon(); }
+    @Override public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() { return baseModel.getTransforms(); }
+    @Override public ItemOverrides getOverrides() { return baseModel.getOverrides(); }
 }

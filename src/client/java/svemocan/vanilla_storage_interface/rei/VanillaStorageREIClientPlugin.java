@@ -5,7 +5,7 @@ import me.shedaniel.rei.api.client.plugins.REIClientPlugin;
 import me.shedaniel.rei.api.client.registry.screen.ScreenRegistry;
 import me.shedaniel.rei.api.common.entry.EntryStack;
 import me.shedaniel.rei.api.common.util.EntryStacks;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 import svemocan.vanilla_storage_interface.gui.StorageInterfaceScreen;
 
 public class VanillaStorageREIClientPlugin implements REIClientPlugin {

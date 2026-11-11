@@ -1,8 +1,8 @@
 package svemocan.vanilla_storage_interface;
 
-import net.minecraft.item.Item;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import net.minecraft.world.item.Item;
 
 public class VirtualInventory {
     // LinkedHashMap is explicitly used to preserve predictable insertion order,

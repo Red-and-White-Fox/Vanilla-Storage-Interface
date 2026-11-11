@@ -4,20 +4,20 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.block.AbstractBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
-import net.minecraft.sound.BlockSoundGroup;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import svemocan.vanilla_storage_interface.StorageAggregator;
 import svemocan.vanilla_storage_interface.StorageInterfaceBlock;
 import svemocan.vanilla_storage_interface.StorageInterfaceBlockEntity;
@@ -36,30 +36,30 @@ import svemocan.vanilla_storage_interface.config.VanillaStorageConfig;
 public class VanillaStorageInterface implements ModInitializer {
     public static VanillaStorageConfig CONFIG;
     public static final String MOD_ID = "vanilla_storage_interface";
-    public static net.minecraft.screen.ScreenHandlerType<svemocan.vanilla_storage_interface.gui.StorageInterfaceScreenHandler> STORAGE_INTERFACE_SCREEN_HANDLER;
+    public static net.minecraft.world.inventory.MenuType<svemocan.vanilla_storage_interface.gui.StorageInterfaceScreenHandler> STORAGE_INTERFACE_SCREEN_HANDLER;
 
     public static final Map<String, Block> INTERFACE_BLOCKS = new HashMap<>();
     public static BlockEntityType<StorageInterfaceBlockEntity> STORAGE_INTERFACE_BLOCK_ENTITY;
-    public static ItemGroup VANILLA_STORAGE_GROUP;
+    public static CreativeModeTab VANILLA_STORAGE_GROUP;
 
-    public static final BlockSoundGroup INTERFACE_SOUNDS = new BlockSoundGroup(
+    public static final SoundType INTERFACE_SOUNDS = new SoundType(
             1.0F, 1.0F,
-            SoundEvents.BLOCK_WOOD_BREAK,
-            SoundEvents.BLOCK_WOOD_STEP,
-            SoundEvents.ENTITY_ITEM_FRAME_PLACE,
-            SoundEvents.BLOCK_WOOD_HIT,
-            SoundEvents.BLOCK_WOOD_FALL
+            SoundEvents.WOOD_BREAK,
+            SoundEvents.WOOD_STEP,
+            SoundEvents.ITEM_FRAME_PLACE,
+            SoundEvents.WOOD_HIT,
+            SoundEvents.WOOD_FALL
     );
 
     // Mute capability framework: Uses INTENTIONALLY_EMPTY sound events to safely cancel acoustic
     // feedback via code-driven configuration without altering standard physical voxel mining attributes.
-    public static final BlockSoundGroup SILENT_SOUNDS = new BlockSoundGroup(
+    public static final SoundType SILENT_SOUNDS = new SoundType(
             0.0F, 1.0F,
-            SoundEvents.INTENTIONALLY_EMPTY,
-            SoundEvents.INTENTIONALLY_EMPTY,
-            SoundEvents.INTENTIONALLY_EMPTY,
-            SoundEvents.INTENTIONALLY_EMPTY,
-            SoundEvents.INTENTIONALLY_EMPTY
+            SoundEvents.EMPTY,
+            SoundEvents.EMPTY,
+            SoundEvents.EMPTY,
+            SoundEvents.EMPTY,
+            SoundEvents.EMPTY
     );
 
     public static final String[] MATERIAL_TYPES = {
@@ -81,30 +81,30 @@ public class VanillaStorageInterface implements ModInitializer {
         // Data-driven iteration loop: dynamically populates registries across all material targets
         // to minimize boilerplate registration footprints.
         for (String wood : MATERIAL_TYPES) {
-            Item frameItem = new Item(new Item.Settings());
-            Registry.register(Registries.ITEM, Identifier.of(MOD_ID, wood + "_storage_frame"), frameItem);
+            Item frameItem = new Item(new Item.Properties());
+            Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(MOD_ID, wood + "_storage_frame"), frameItem);
 
             Block interfaceBlock = new StorageInterfaceBlock(
-                    AbstractBlock.Settings.create()
+                    BlockBehaviour.Properties.of()
                             .strength(2.5f, 2.5f)
-                            .requiresTool()
-                            .nonOpaque()
-                            .luminance(state -> state.get(StorageInterfaceBlock.ILLUMINATED) ? 10 : 0)
+                            .requiresCorrectToolForDrops()
+                            .noOcclusion()
+                            .lightLevel(state -> state.getValue(StorageInterfaceBlock.ILLUMINATED) ? 10 : 0)
             );
-            Registry.register(Registries.BLOCK, Identifier.of(MOD_ID, wood + "_storage_interface"), interfaceBlock);
-            Registry.register(Registries.ITEM, Identifier.of(MOD_ID, wood + "_storage_interface"), new BlockItem(interfaceBlock, new Item.Settings()));
+            Registry.register(BuiltInRegistries.BLOCK, ResourceLocation.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface"), interfaceBlock);
+            Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface"), new BlockItem(interfaceBlock, new Item.Properties()));
 
             INTERFACE_BLOCKS.put(wood, interfaceBlock);
         }
 
-        VANILLA_STORAGE_GROUP = Registry.register(Registries.ITEM_GROUP, Identifier.of(MOD_ID, "main"),
+        VANILLA_STORAGE_GROUP = Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, ResourceLocation.fromNamespaceAndPath(MOD_ID, "main"),
                 FabricItemGroup.builder()
-                        .icon(() -> new ItemStack(Registries.ITEM.get(Identifier.of(MOD_ID, "oak_storage_interface"))))
-                        .displayName(Text.translatable("itemGroup.vanilla_storage_interface.main"))
-                        .entries((context, entries) -> {
+                        .icon(() -> new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(MOD_ID, "oak_storage_interface"))))
+                        .title(Component.translatable("itemGroup.vanilla_storage_interface.main"))
+                        .displayItems((context, entries) -> {
                             for (String wood : MATERIAL_TYPES) {
-                                entries.add(Registries.ITEM.get(Identifier.of(MOD_ID, wood + "_storage_frame")));
-                                entries.add(Registries.ITEM.get(Identifier.of(MOD_ID, wood + "_storage_interface")));
+                                entries.accept(BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(MOD_ID, wood + "_storage_frame")));
+                                entries.accept(BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface")));
                             }
                         })
                         .build()
@@ -114,14 +114,14 @@ public class VanillaStorageInterface implements ModInitializer {
         // optimizes data tracker assignments and keeps block entity tracking overhead minimal.
         Block[] blockArray = INTERFACE_BLOCKS.values().toArray(new Block[0]);
         STORAGE_INTERFACE_BLOCK_ENTITY = Registry.register(
-                Registries.BLOCK_ENTITY_TYPE,
-                Identifier.of(MOD_ID, "storage_interface"),
-                BlockEntityType.Builder.create(StorageInterfaceBlockEntity::new, blockArray).build()
+                BuiltInRegistries.BLOCK_ENTITY_TYPE,
+                ResourceLocation.fromNamespaceAndPath(MOD_ID, "storage_interface"),
+                BlockEntityType.Builder.of(StorageInterfaceBlockEntity::new, blockArray).build()
         );
 
         STORAGE_INTERFACE_SCREEN_HANDLER = Registry.register(
-                Registries.SCREEN_HANDLER, Identifier.of(MOD_ID, "storage_interface"),
-                new net.minecraft.screen.ScreenHandlerType<>(svemocan.vanilla_storage_interface.gui.StorageInterfaceScreenHandler::new, net.minecraft.resource.featuretoggle.FeatureSet.empty())
+                BuiltInRegistries.MENU, ResourceLocation.fromNamespaceAndPath(MOD_ID, "storage_interface"),
+                new net.minecraft.world.inventory.MenuType<>(svemocan.vanilla_storage_interface.gui.StorageInterfaceScreenHandler::new, net.minecraft.world.flag.FeatureFlagSet.of())
         );
 
         // Modern Fabric Networking Framework (1.20.5+): Network payloads require metadata type split registrations.
@@ -131,80 +131,80 @@ public class VanillaStorageInterface implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(OpenTerminalPayload.ID, (payload, context) -> {
             context.server().execute(() -> {
-                net.minecraft.server.network.ServerPlayerEntity player = context.player();
+                net.minecraft.server.level.ServerPlayer player = context.player();
 
                 if (payload.mode() == 1 && CONFIG.enableVoidTerminal) {
-                    player.getServerWorld().playSound(null, player.getBlockPos(), net.minecraft.sound.SoundEvents.BLOCK_ENDER_CHEST_OPEN, net.minecraft.sound.SoundCategory.PLAYERS, 0.5F, player.getServerWorld().random.nextFloat() * 0.1F + 0.9F);
-                    player.openHandledScreen(new SimpleNamedScreenHandlerFactory((s, i, p) -> new StorageInterfaceScreenHandler(s, i, p.getBlockPos(), 1, -1), Text.literal("Void Terminal")));
-                    StorageAggregator.VirtualInventory vi = StorageAggregator.buildFromInventory(player.getServerWorld(), player.getEnderChestInventory());
-                    ServerPlayNetworking.send(player, new StorageSyncPayload(vi.items, vi.emptyShulkerSlots, player.getBlockPos(), true));
+                    player.serverLevel().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ENDER_CHEST_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.serverLevel().random.nextFloat() * 0.1F + 0.9F);
+                    player.openMenu(new SimpleMenuProvider((s, i, p) -> new StorageInterfaceScreenHandler(s, i, p.blockPosition(), 1, -1), Component.literal("Void Terminal")));
+                    StorageAggregator.VirtualInventory vi = StorageAggregator.buildFromInventory(player.serverLevel(), player.getEnderChestInventory());
+                    ServerPlayNetworking.send(player, new StorageSyncPayload(vi.items, vi.emptyShulkerSlots, player.blockPosition(), true));
                 }
                 else if (payload.mode() == 2 && CONFIG.enableBoxTerminal) {
                     int targetIndex = payload.targetId();
-                    net.minecraft.item.ItemStack targetShulker = player.getInventory().getStack(targetIndex);
+                    net.minecraft.world.item.ItemStack targetShulker = player.getInventory().getItem(targetIndex);
 
                     if (StorageMutator.isShulkerBox(targetShulker.getItem())) {
                         if (targetShulker.getCount() > 1) {
-                            int emptySlot = player.getInventory().getEmptySlot();
+                            int emptySlot = player.getInventory().getFreeSlot();
                             if (emptySlot != -1) {
                                 ItemStack singleBox = targetShulker.copyWithCount(1);
                                 ItemStack leftover = targetShulker.copyWithCount(targetShulker.getCount() - 1);
-                                player.getInventory().setStack(targetIndex, singleBox);
-                                player.getInventory().setStack(emptySlot, leftover);
+                                player.getInventory().setItem(targetIndex, singleBox);
+                                player.getInventory().setItem(emptySlot, leftover);
                                 targetShulker = singleBox;
                             } else {
-                                player.sendMessage(net.minecraft.text.Text.literal("§cCannot open stacked Shulker Box. Your inventory is full!"), true);
+                                player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cCannot open stacked Shulker Box. Your inventory is full!"), true);
                                 return;
                             }
                         }
 
-                        final net.minecraft.item.ItemStack finalShulker = targetShulker; // CRITICAL FIX: Captures the effectively final state for the lambda
+                        final net.minecraft.world.item.ItemStack finalShulker = targetShulker; // CRITICAL FIX: Captures the effectively final state for the lambda
 
-                        player.getServerWorld().playSound(null, player.getBlockPos(), net.minecraft.sound.SoundEvents.BLOCK_SHULKER_BOX_OPEN, net.minecraft.sound.SoundCategory.PLAYERS, 0.5F, player.getServerWorld().random.nextFloat() * 0.1F + 0.9F);
-                        player.openHandledScreen(new SimpleNamedScreenHandlerFactory((s, i, p) -> new StorageInterfaceScreenHandler(s, i, p.getBlockPos(), 2, targetIndex), finalShulker.getName()));
-                        StorageAggregator.VirtualInventory vi = StorageAggregator.buildFromInventory(player.getServerWorld(), new StorageMutator.ShulkerItemInventory(finalShulker));
-                        ServerPlayNetworking.send(player, new StorageSyncPayload(vi.items, vi.emptyShulkerSlots, player.getBlockPos(), true));
+                        player.serverLevel().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SHULKER_BOX_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.serverLevel().random.nextFloat() * 0.1F + 0.9F);
+                        player.openMenu(new SimpleMenuProvider((s, i, p) -> new StorageInterfaceScreenHandler(s, i, p.blockPosition(), 2, targetIndex), finalShulker.getHoverName()));
+                        StorageAggregator.VirtualInventory vi = StorageAggregator.buildFromInventory(player.serverLevel(), new StorageMutator.ShulkerItemInventory(finalShulker));
+                        ServerPlayNetworking.send(player, new StorageSyncPayload(vi.items, vi.emptyShulkerSlots, player.blockPosition(), true));
                     }
                 }
                 else if (payload.mode() == 3 && CONFIG.enablePlayerInventoryTerminal) {
-                    player.openHandledScreen(new SimpleNamedScreenHandlerFactory((s, i, p) -> new StorageInterfaceScreenHandler(s, i, p.getBlockPos(), 3, -1), Text.literal("Player Inventory Terminal")));
+                    player.openMenu(new SimpleMenuProvider((s, i, p) -> new StorageInterfaceScreenHandler(s, i, p.blockPosition(), 3, -1), Component.literal("Player Inventory Terminal")));
                     StorageAggregator.VirtualInventory vi = StorageAggregator.buildMode3(player.getInventory());
-                    ServerPlayNetworking.send(player, new StorageSyncPayload(vi.items, vi.emptyShulkerSlots, player.getBlockPos(), true));
+                    ServerPlayNetworking.send(player, new StorageSyncPayload(vi.items, vi.emptyShulkerSlots, player.blockPosition(), true));
                 }
             });
         });
 
         ServerPlayNetworking.registerGlobalReceiver(OpenRawUIPayload.ID, (payload, context) -> {
             context.server().execute(() -> {
-                net.minecraft.server.network.ServerPlayerEntity player = context.player();
+                net.minecraft.server.level.ServerPlayer player = context.player();
 
                 if (payload.mode() == 1 && CONFIG.enableVoidRaw) {
-                    player.getServerWorld().playSound(null, player.getBlockPos(), net.minecraft.sound.SoundEvents.BLOCK_ENDER_CHEST_OPEN, net.minecraft.sound.SoundCategory.PLAYERS, 0.5F, player.getServerWorld().random.nextFloat() * 0.1F + 0.9F);
-                    player.openHandledScreen(new SimpleNamedScreenHandlerFactory((syncId, inv, p) ->
-                            net.minecraft.screen.GenericContainerScreenHandler.createGeneric9x3(syncId, inv, player.getEnderChestInventory()), Text.literal("Raw Void Storage")));
+                    player.serverLevel().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ENDER_CHEST_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.serverLevel().random.nextFloat() * 0.1F + 0.9F);
+                    player.openMenu(new SimpleMenuProvider((syncId, inv, p) ->
+                            net.minecraft.world.inventory.ChestMenu.threeRows(syncId, inv, player.getEnderChestInventory()), Component.literal("Raw Void Storage")));
                 }
                 else if (payload.mode() == 2 && CONFIG.enableBoxRaw) {
-                    net.minecraft.item.ItemStack targetShulker = player.getInventory().getStack(payload.targetId());
+                    net.minecraft.world.item.ItemStack targetShulker = player.getInventory().getItem(payload.targetId());
                     if (StorageMutator.isShulkerBox(targetShulker.getItem())) {
                         if (targetShulker.getCount() > 1) {
-                            int emptySlot = player.getInventory().getEmptySlot();
+                            int emptySlot = player.getInventory().getFreeSlot();
                             if (emptySlot != -1) {
                                 ItemStack singleBox = targetShulker.copyWithCount(1);
                                 ItemStack leftover = targetShulker.copyWithCount(targetShulker.getCount() - 1);
-                                player.getInventory().setStack(payload.targetId(), singleBox);
-                                player.getInventory().setStack(emptySlot, leftover);
+                                player.getInventory().setItem(payload.targetId(), singleBox);
+                                player.getInventory().setItem(emptySlot, leftover);
                                 targetShulker = singleBox;
                             } else {
-                                player.sendMessage(net.minecraft.text.Text.literal("§cCannot open stacked Shulker Box. Your inventory is full!"), true);
+                                player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cCannot open stacked Shulker Box. Your inventory is full!"), true);
                                 return;
                             }
                         }
 
-                        final net.minecraft.item.ItemStack finalShulker = targetShulker;
+                        final net.minecraft.world.item.ItemStack finalShulker = targetShulker;
 
-                        player.getServerWorld().playSound(null, player.getBlockPos(), net.minecraft.sound.SoundEvents.BLOCK_SHULKER_BOX_OPEN, net.minecraft.sound.SoundCategory.PLAYERS, 0.5F, player.getServerWorld().random.nextFloat() * 0.1F + 0.9F);
-                        player.openHandledScreen(new SimpleNamedScreenHandlerFactory((syncId, inv, p) ->
-                                new net.minecraft.screen.ShulkerBoxScreenHandler(syncId, inv, new StorageMutator.ShulkerItemInventory(finalShulker)), finalShulker.getName()));
+                        player.serverLevel().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SHULKER_BOX_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.serverLevel().random.nextFloat() * 0.1F + 0.9F);
+                        player.openMenu(new SimpleMenuProvider((syncId, inv, p) ->
+                                new net.minecraft.world.inventory.ShulkerBoxMenu(syncId, inv, new StorageMutator.ShulkerItemInventory(finalShulker)), finalShulker.getHoverName()));
                     }
                 }
             });

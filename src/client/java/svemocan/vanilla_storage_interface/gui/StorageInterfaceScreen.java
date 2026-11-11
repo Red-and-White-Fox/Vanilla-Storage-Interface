@@ -2,28 +2,28 @@ package svemocan.vanilla_storage_interface.gui;
 
 import me.shedaniel.autoconfig.AutoConfig;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 import svemocan.VanillaStorageInterface;
 import svemocan.client.VanillaStorageInterfaceClient;
 import svemocan.vanilla_storage_interface.compat.IpnCompatWrapper;
 import svemocan.vanilla_storage_interface.config.VanillaStorageConfig;
 import svemocan.vanilla_storage_interface.network.StorageActionPayload;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 import svemocan.vanilla_storage_interface.network.VirtualItem;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreenHandler> {
-    private static final Identifier TEXTURE = Identifier.of(VanillaStorageInterface.MOD_ID, "textures/gui/storage_interface.png");
-    private static final Identifier TEXTURE_VIRTUAL = Identifier.of(VanillaStorageInterface.MOD_ID, "textures/gui/void_terminal_interface.png");
+public class StorageInterfaceScreen extends AbstractContainerScreen<StorageInterfaceScreenHandler> {
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(VanillaStorageInterface.MOD_ID, "textures/gui/storage_interface.png");
+    private static final ResourceLocation TEXTURE_VIRTUAL = ResourceLocation.fromNamespaceAndPath(VanillaStorageInterface.MOD_ID, "textures/gui/void_terminal_interface.png");
 
     private int lastSwipedSlotId = -1;
     private long pauseSortingTime = 0;
@@ -31,12 +31,12 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     private int emptyShulkerSlots = 0;
     private final int titleColor;
     private final int playerInventoryTitleColor;
-    private net.minecraft.util.math.BlockPos physicalPos = null;
+    private net.minecraft.core.BlockPos physicalPos = null;
     private boolean isVirtual = false;
 
     private List<VirtualItem> virtualItems = new ArrayList<>();
     private List<VirtualItem> filteredItems = new ArrayList<>();
-    private TextFieldWidget searchBox;
+    private EditBox searchBox;
     private int scrollOffset = 0;
     private static final int COLUMNS = 9;
     private static final int ROWS = 5;
@@ -52,23 +52,23 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
     private boolean interceptDropKeyChar = false;
 
-    public StorageInterfaceScreen(StorageInterfaceScreenHandler handler, PlayerInventory inventory, Text title) {
+    public StorageInterfaceScreen(StorageInterfaceScreenHandler handler, Inventory inventory, Component title) {
         super(handler, inventory, title);
-        this.backgroundWidth = 176;
-        this.backgroundHeight = 222;
-        this.playerInventoryTitleY = this.backgroundHeight - 94;
+        this.imageWidth = 176;
+        this.imageHeight = 222;
+        this.inventoryLabelY = this.imageHeight - 94;
         this.titleColor = 0xFFFFFF;
         this.playerInventoryTitleColor = 0xFFFFFF;
     }
 
-    public void updateData(List<VirtualItem> items, int emptySlots, net.minecraft.util.math.BlockPos pos, boolean isVirtual) {
+    public void updateData(List<VirtualItem> items, int emptySlots, net.minecraft.core.BlockPos pos, boolean isVirtual) {
         this.virtualItems = items;
         this.emptyShulkerSlots = emptySlots;
         this.physicalPos = pos;
         this.isVirtual = isVirtual;
 
-        if (!isVirtual && this.client != null && this.client.world != null && this.physicalPos != null) {
-            net.minecraft.block.entity.BlockEntity be = this.client.world.getBlockEntity(this.physicalPos);
+        if (!isVirtual && this.minecraft != null && this.minecraft.level != null && this.physicalPos != null) {
+            net.minecraft.world.level.block.entity.BlockEntity be = this.minecraft.level.getBlockEntity(this.physicalPos);
             if (be instanceof svemocan.vanilla_storage_interface.StorageInterfaceBlockEntity interfaceBe) {
                 this.cachedInterfaceEntity = interfaceBe;
             }
@@ -84,9 +84,9 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     private boolean isVirtualTerminal() { return this.isVirtual; }
 
     @Override
-    public void handledScreenTick() {
-        super.handledScreenTick();
-        if (this.pauseSortingTime > 0 && net.minecraft.util.Util.getMeasuringTimeMs() >= this.pauseSortingTime) {
+    public void containerTick() {
+        super.containerTick();
+        if (this.pauseSortingTime > 0 && net.minecraft.Util.getMillis() >= this.pauseSortingTime) {
             this.pauseSortingTime = 0;
             this.refresh();
         }
@@ -103,32 +103,32 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
         if (!isVirtual && mouseX >= ghostX && mouseX < ghostX + 18 && mouseY >= ghostY && mouseY < ghostY + 18) {
             if (button == 1) {
-                net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                ClientPlayNetworking.send(new StorageActionPayload("CLEAR_DISPLAY", new ItemStack(net.minecraft.item.Items.STRUCTURE_VOID), 1));
+                net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                ClientPlayNetworking.send(new StorageActionPayload("CLEAR_DISPLAY", new ItemStack(net.minecraft.world.item.Items.STRUCTURE_VOID), 1));
                 return true;
             } else if (button == 2) {
-                net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.ENTITY_ITEM_FRAME_REMOVE_ITEM, 1.0F));
+                net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ITEM_FRAME_REMOVE_ITEM, 1.0F));
                 ClientPlayNetworking.send(new StorageActionPayload("RESET_DISPLAY", ItemStack.EMPTY, 0));
                 return true;
             }
 
-            net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-            ItemStack cursorStack = this.getScreenHandler().getCursorStack();
+            net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+            ItemStack cursorStack = this.getMenu().getCursorStack();
             ItemStack payloadStack = cursorStack.isEmpty() ? ItemStack.EMPTY : cursorStack.copyWithCount(1);
             ClientPlayNetworking.send(new StorageActionPayload("SET_DISPLAY", payloadStack, 1));
             return true;
         }
 
         if (button == 1 && this.searchBox.isMouseOver(mouseX, mouseY)) {
-            this.searchBox.setText("");
+            this.searchBox.setValue("");
             return true;
         }
 
-        int startX = (this.width - this.backgroundWidth) / 2;
-        int startY = (this.height - this.backgroundHeight) / 2;
+        int startX = (this.width - this.imageWidth) / 2;
+        int startY = (this.height - this.imageHeight) / 2;
 
         if (button == 1 && mouseX >= startX + 99 && mouseX <= startX + 149 && mouseY >= startY + 19 && mouseY <= startY + 33) {
-            net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+            net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
             this.setSortMode(SortMode.NONE);
             return true;
         }
@@ -138,14 +138,14 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
             return true;
         }
 
-        if (this.focusedSlot != null && this.focusedSlot.inventory instanceof PlayerInventory) {
-            this.lastSwipedSlotId = this.focusedSlot.id; // Record physical slot interaction to prevent double drag triggers
+        if (this.hoveredSlot != null && this.hoveredSlot.container instanceof Inventory) {
+            this.lastSwipedSlotId = this.hoveredSlot.index; // Record physical slot interaction to prevent double drag triggers
 
-            long time = net.minecraft.util.Util.getMeasuringTimeMs();
-            boolean isDoubleClick = (time - lastShiftClickTime < 250) && (lastShiftClickedSlotId == this.focusedSlot.id);
+            long time = net.minecraft.Util.getMillis();
+            boolean isDoubleClick = (time - lastShiftClickTime < 250) && (lastShiftClickedSlotId == this.hoveredSlot.index);
 
-            ItemStack cursorStack = this.getScreenHandler().getCursorStack();
-            ItemStack hoveredStack = this.focusedSlot.getStack();
+            ItemStack cursorStack = this.getMenu().getCursorStack();
+            ItemStack hoveredStack = this.hoveredSlot.getItem();
 
             if (Screen.hasShiftDown()) {
                 ItemStack targetSync = cursorStack.isEmpty() ? (isDoubleClick ? lastShiftClickedStack : hoveredStack) : cursorStack;
@@ -156,10 +156,10 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                     return true;
                 } else if (!hoveredStack.isEmpty()) {
                     this.lastShiftClickTime = time;
-                    this.lastShiftClickedSlotId = this.focusedSlot.id;
+                    this.lastShiftClickedSlotId = this.hoveredSlot.index;
                     this.lastShiftClickedStack = hoveredStack.copy();
 
-                    ClientPlayNetworking.send(new StorageActionPayload("QUICK_MOVE", ItemStack.EMPTY, this.focusedSlot.id));
+                    ClientPlayNetworking.send(new StorageActionPayload("QUICK_MOVE", ItemStack.EMPTY, this.hoveredSlot.index));
                     return true;
                 }
             }
@@ -168,7 +168,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         if (button != 0 && button != 1 && button != 2) return super.mouseClicked(mouseX, mouseY, button);
 
         boolean overVirtualGrid = mouseX >= startX + 8 && mouseX < startX + 8 + (COLUMNS * 18) && mouseY >= startY + 36 && mouseY < startY + 36 + (ROWS * 18);
-        ItemStack cursorStack = this.getScreenHandler().getCursorStack();
+        ItemStack cursorStack = this.getMenu().getCursorStack();
         ItemStack hoveredItem = getHoveredVirtualItem(mouseX, mouseY);
 
         if (overVirtualGrid) {
@@ -176,10 +176,10 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
             int row = (int) (mouseY - (startY + 36)) / 18;
             int gridId = (scrollOffset * COLUMNS) + (row * COLUMNS) + col + 1000;
 
-            if (button == 2 && hoveredItem != null && !cursorStack.isEmpty() && ItemStack.areItemsAndComponentsEqual(cursorStack, hoveredItem)) {
-                int needed = cursorStack.getMaxCount() - cursorStack.getCount();
+            if (button == 2 && hoveredItem != null && !cursorStack.isEmpty() && ItemStack.isSameItemSameComponents(cursorStack, hoveredItem)) {
+                int needed = cursorStack.getMaxStackSize() - cursorStack.getCount();
                 if (needed > 0) {
-                    net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                    net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
                     ClientPlayNetworking.send(new StorageActionPayload("EXTRACT", hoveredItem, needed));
                     return true;
                 }
@@ -188,14 +188,14 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
             if (button == 0 || button == 1) {
                 if (!cursorStack.isEmpty()) {
                     this.lastSwipedSlotId = gridId; // Record virtual slot interaction
-                    net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                    net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
                     ClientPlayNetworking.send(new StorageActionPayload("INSERT_CURSOR", ItemStack.EMPTY, (button == 0) ? cursorStack.getCount() : 1));
                     return true;
                 } else if (hoveredItem != null) {
                     this.lastSwipedSlotId = gridId; // Record virtual slot interaction
-                    net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                    ClientPlayNetworking.send(new StorageActionPayload(Screen.hasShiftDown() ? "SHIFT_EXTRACT" : "EXTRACT", hoveredItem, (button == 0) ? hoveredItem.getMaxCount() : 1));
-                    this.pauseSortingTime = net.minecraft.util.Util.getMeasuringTimeMs() + 1500;
+                    net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                    ClientPlayNetworking.send(new StorageActionPayload(Screen.hasShiftDown() ? "SHIFT_EXTRACT" : "EXTRACT", hoveredItem, (button == 0) ? hoveredItem.getMaxStackSize() : 1));
+                    this.pauseSortingTime = net.minecraft.Util.getMillis() + 1500;
                     return true;
                 }
             }
@@ -211,17 +211,17 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
         if (!isVirtualTerminal() && mouseX >= ghostX && mouseX < ghostX + 18 && mouseY >= ghostY && mouseY < ghostY + 18) {
             if (hasShift) {
-                net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.ITEM_SPYGLASS_USE, verticalAmount > 0 ? 1.2F : 0.8F));
+                net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.SPYGLASS_USE, verticalAmount > 0 ? 1.2F : 0.8F));
                 ClientPlayNetworking.send(new StorageActionPayload("SCALE_DISPLAY", ItemStack.EMPTY, verticalAmount > 0 ? 1 : -1));
             } else {
-                net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.ENTITY_ITEM_FRAME_ROTATE_ITEM, 1.0F));
+                net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ITEM_FRAME_ROTATE_ITEM, 1.0F));
                 ClientPlayNetworking.send(new StorageActionPayload("ROTATE_DISPLAY", ItemStack.EMPTY, verticalAmount > 0 ? 1 : -1));
             }
             return true;
         }
 
-        int startX = (this.width - this.backgroundWidth) / 2;
-        int startY = (this.height - this.backgroundHeight) / 2;
+        int startX = (this.width - this.imageWidth) / 2;
+        int startY = (this.height - this.imageHeight) / 2;
         boolean overVirtualGrid = mouseX >= startX + 8 && mouseX < startX + 8 + (COLUMNS * 18) && mouseY >= startY + 36 && mouseY < startY + 36 + (ROWS * 18);
 
         if (overVirtualGrid) {
@@ -229,9 +229,9 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                 if (verticalAmount < 0) {
                     ItemStack hoveredItem = getHoveredVirtualItem(mouseX, mouseY);
                     if (hoveredItem != null) {
-                        net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                        ClientPlayNetworking.send(new StorageActionPayload("SHIFT_EXTRACT", hoveredItem, hasShift ? hoveredItem.getMaxCount() : 1));
-                        this.pauseSortingTime = net.minecraft.util.Util.getMeasuringTimeMs() + 1500;
+                        net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                        ClientPlayNetworking.send(new StorageActionPayload("SHIFT_EXTRACT", hoveredItem, hasShift ? hoveredItem.getMaxStackSize() : 1));
+                        this.pauseSortingTime = net.minecraft.Util.getMillis() + 1500;
                     }
                 }
                 return true;
@@ -250,8 +250,8 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     }
 
     public ItemStack getHoveredVirtualItem(double mouseX, double mouseY) {
-        int x = (this.width - this.backgroundWidth) / 2;
-        int y = (this.height - this.backgroundHeight) / 2;
+        int x = (this.width - this.imageWidth) / 2;
+        int y = (this.height - this.imageHeight) / 2;
         int startX = x + 8;
         int startY = y + 36;
 
@@ -276,41 +276,41 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         super.init();
         IpnCompatWrapper.updateKeys();
 
-        int startX = (this.width - this.backgroundWidth) / 2;
-        int startY = (this.height - this.backgroundHeight) / 2;
+        int startX = (this.width - this.imageWidth) / 2;
+        int startY = (this.height - this.imageHeight) / 2;
 
         this.ghostX = startX + 152;
         this.ghostY = startY + 18;
 
         this.currentSortMode = SortMode.values()[VanillaStorageInterface.CONFIG.lastSortMode];
 
-        this.searchBox = new TextFieldWidget(this.textRenderer, startX + 10, startY + 23, 81, 14, Text.literal("Search..."));
-        this.searchBox.setDrawsBackground(false);
-        this.searchBox.setChangedListener(query -> {
+        this.searchBox = new EditBox(this.font, startX + 10, startY + 23, 81, 14, Component.literal("Search..."));
+        this.searchBox.setBordered(false);
+        this.searchBox.setResponder(query -> {
             this.pauseSortingTime = 0;
             this.updateSearch(query);
         });
-        this.addDrawableChild(this.searchBox);
+        this.addRenderableWidget(this.searchBox);
 
-        this.addDrawableChild(net.minecraft.client.gui.widget.ButtonWidget.builder(Text.literal("9"), btn -> {
+        this.addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.literal("9"), btn -> {
             this.setSortMode(SortMode.DESC);
             this.setFocused(null);
-        }).dimensions(startX + 99, startY + 19, 14, 14).build());
+        }).bounds(startX + 99, startY + 19, 14, 14).build());
 
-        this.addDrawableChild(net.minecraft.client.gui.widget.ButtonWidget.builder(Text.literal("1"), btn -> {
+        this.addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.literal("1"), btn -> {
             this.setSortMode(SortMode.ASC);
             this.setFocused(null);
-        }).dimensions(startX + 117, startY + 19, 14, 14).build());
+        }).bounds(startX + 117, startY + 19, 14, 14).build());
 
-        this.addDrawableChild(net.minecraft.client.gui.widget.ButtonWidget.builder(Text.literal("A"), btn -> {
+        this.addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.literal("A"), btn -> {
             this.setSortMode(SortMode.NAME);
             this.setFocused(null);
-        }).dimensions(startX + 135, startY + 19, 14, 14).build());
+        }).bounds(startX + 135, startY + 19, 14, 14).build());
 
         updateSearch("");
 
         if (VanillaStorageInterfaceClient.savedMouseX != -1) {
-            org.lwjgl.glfw.GLFW.glfwSetCursorPos(this.client.getWindow().getHandle(), VanillaStorageInterfaceClient.savedMouseX, VanillaStorageInterfaceClient.savedMouseY);
+            org.lwjgl.glfw.GLFW.glfwSetCursorPos(this.minecraft.getWindow().getWindow(), VanillaStorageInterfaceClient.savedMouseX, VanillaStorageInterfaceClient.savedMouseY);
             VanillaStorageInterfaceClient.savedMouseX = -1;
             VanillaStorageInterfaceClient.savedMouseY = -1;
         }
@@ -324,12 +324,12 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     }
 
     public void refresh() {
-        if (net.minecraft.util.Util.getMeasuringTimeMs() < this.pauseSortingTime) {
+        if (net.minecraft.Util.getMillis() < this.pauseSortingTime) {
             for (int i = 0; i < this.filteredItems.size(); i++) {
                 VirtualItem oldItem = this.filteredItems.get(i);
                 int newCount = 0;
                 for (VirtualItem vi : this.virtualItems) {
-                    if (ItemStack.areItemsAndComponentsEqual(vi.stack(), oldItem.stack())) {
+                    if (ItemStack.isSameItemSameComponents(vi.stack(), oldItem.stack())) {
                         newCount = vi.count();
                         break;
                     }
@@ -338,11 +338,11 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
             }
             this.filteredItems.removeIf(vi -> vi.count() <= 0);
 
-            String currentQuery = this.searchBox != null ? this.searchBox.getText() : "";
+            String currentQuery = this.searchBox != null ? this.searchBox.getValue() : "";
             for (VirtualItem vi : this.virtualItems) {
                 boolean exists = false;
                 for (VirtualItem existing : this.filteredItems) {
-                    if (ItemStack.areItemsAndComponentsEqual(vi.stack(), existing.stack())) {
+                    if (ItemStack.isSameItemSameComponents(vi.stack(), existing.stack())) {
                         exists = true;
                         break;
                     }
@@ -353,13 +353,13 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
             }
             return;
         }
-        if (this.searchBox != null) this.updateSearch(this.searchBox.getText());
+        if (this.searchBox != null) this.updateSearch(this.searchBox.getValue());
     }
 
     private String getPrimaryEnchantmentName(ItemStack stack, String defaultName) {
-        net.minecraft.component.type.ItemEnchantmentsComponent enchantments = stack.get(net.minecraft.component.DataComponentTypes.STORED_ENCHANTMENTS);
+        net.minecraft.world.item.enchantment.ItemEnchantments enchantments = stack.get(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
         if (enchantments != null && !enchantments.isEmpty()) {
-            return enchantments.getEnchantments().iterator().next().value().description().getString();
+            return enchantments.keySet().iterator().next().value().description().getString();
         }
         return defaultName;
     }
@@ -370,11 +370,11 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         String name = vi.stack().getName().getString().toLowerCase();
         if (name.contains(lowerQuery)) return true;
 
-        net.minecraft.component.type.ItemEnchantmentsComponent enchantments = vi.stack().get(net.minecraft.component.DataComponentTypes.STORED_ENCHANTMENTS);
-        if (enchantments == null) enchantments = vi.stack().get(net.minecraft.component.DataComponentTypes.ENCHANTMENTS);
+        net.minecraft.world.item.enchantment.ItemEnchantments enchantments = vi.stack().get(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
+        if (enchantments == null) enchantments = vi.stack().get(net.minecraft.core.component.DataComponents.ENCHANTMENTS);
 
         if (enchantments != null) {
-            for (var entry : enchantments.getEnchantments()) {
+            for (var entry : enchantments.keySet()) {
                 String enchName = entry.value().description().getString().toLowerCase();
                 if (enchName.contains(lowerQuery)) return true;
             }
@@ -412,30 +412,30 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
         this.searchBox.render(context, mouseX, mouseY, delta);
-        this.drawMouseoverTooltip(context, mouseX, mouseY);
+        this.renderTooltip(context, mouseX, mouseY);
 
         ItemStack hoveredItem = getHoveredVirtualItem(mouseX, mouseY);
-        if (hoveredItem != null) context.drawItemTooltip(this.textRenderer, hoveredItem, mouseX, mouseY);
+        if (hoveredItem != null) context.renderTooltip(this.font, hoveredItem, mouseX, mouseY);
 
         if (!isVirtualTerminal() && mouseX >= ghostX && mouseX < ghostX + 18 && mouseY >= ghostY && mouseY < ghostY + 18) {
             ItemStack displayStack = getGhostSlotItem();
-            if (!displayStack.isEmpty() && !displayStack.isOf(net.minecraft.item.Items.STRUCTURE_VOID)) {
-                context.drawItemTooltip(this.textRenderer, displayStack, mouseX, mouseY);
+            if (!displayStack.isEmpty() && !displayStack.is(net.minecraft.world.item.Items.STRUCTURE_VOID)) {
+                context.renderTooltip(this.font, displayStack, mouseX, mouseY);
             } else {
-                context.drawTooltip(this.textRenderer, Text.literal("Display Icon Slot"), mouseX, mouseY);
+                context.renderTooltip(this.font, Component.literal("Display Icon Slot"), mouseX, mouseY);
             }
         }
     }
 
     @Override
-    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
-        int x = (this.width - this.backgroundWidth) / 2;
-        int y = (this.height - this.backgroundHeight) / 2;
+    protected void renderBg(GuiGraphics context, float delta, int mouseX, int mouseY) {
+        int x = (this.width - this.imageWidth) / 2;
+        int y = (this.height - this.imageHeight) / 2;
 
-        context.drawTexture(isVirtualTerminal() ? TEXTURE_VIRTUAL : TEXTURE, x, y, 0, 0, this.backgroundWidth, this.backgroundHeight, 176, 222);
+        context.blit(isVirtualTerminal() ? TEXTURE_VIRTUAL : TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight, 176, 222);
 
         int highlightX = 0;
         switch (currentSortMode) {
@@ -450,8 +450,8 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
         if (!isVirtualTerminal()) {
             ItemStack displayItem = getGhostSlotItem();
-            if (!displayItem.isEmpty() && !displayItem.isOf(net.minecraft.item.Items.STRUCTURE_VOID)) {
-                context.drawItem(displayItem, ghostX, ghostY);
+            if (!displayItem.isEmpty() && !displayItem.is(net.minecraft.world.item.Items.STRUCTURE_VOID)) {
+                context.renderItem(displayItem, ghostX, ghostY);
             }
             if (mouseX >= ghostX && mouseX < ghostX + 16 && mouseY >= ghostY && mouseY < ghostY + 16) {
                 context.fill(ghostX, ghostY, ghostX + 16, ghostY + 16, 0x80FFFFFF);
@@ -473,19 +473,19 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                 int slotX = startX + (col * 18);
                 int slotY = startY + (row * 18);
 
-                context.drawItem(stack, slotX, slotY);
-                context.getMatrices().push();
-                context.getMatrices().translate(0, 0, 200);
+                context.renderItem(stack, slotX, slotY);
+                context.pose().pushPose();
+                context.pose().translate(0, 0, 200);
 
                 String countText = formatCount(count);
                 float scale = countText.length() >= 3 ? 0.75f : 1.0f;
-                context.getMatrices().scale(scale, scale, 1.0f);
+                context.pose().scale(scale, scale, 1.0f);
 
-                int textX = (int) ((slotX + 17) / scale) - this.textRenderer.getWidth(countText);
+                int textX = (int) ((slotX + 17) / scale) - this.font.width(countText);
                 int textY = (int) ((slotY + 17) / scale) - 8;
 
-                context.drawTextWithShadow(this.textRenderer, countText, textX, textY, 0xFFFFFF);
-                context.getMatrices().pop();
+                context.drawString(this.font, countText, textX, textY, 0xFFFFFF);
+                context.pose().popPose();
 
                 if (mouseX >= slotX && mouseX < slotX + 18 && mouseY >= slotY && mouseY < slotY + 18) {
                     context.fill(slotX, slotY, slotX + 16, slotY + 16, 0x80FFFFFF);
@@ -502,18 +502,18 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (button == 0 && Screen.hasShiftDown() && this.getScreenHandler().getCursorStack().isEmpty()) {
-            if (this.focusedSlot != null && this.focusedSlot.inventory instanceof PlayerInventory) {
-                if (this.focusedSlot.id != this.lastSwipedSlotId && this.focusedSlot.hasStack()) {
-                    this.lastSwipedSlotId = this.focusedSlot.id;
-                    net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.ITEM_BUNDLE_INSERT, 1.0F));
-                    ClientPlayNetworking.send(new StorageActionPayload("QUICK_MOVE", ItemStack.EMPTY, this.focusedSlot.id));
+        if (button == 0 && Screen.hasShiftDown() && this.getMenu().getCursorStack().isEmpty()) {
+            if (this.hoveredSlot != null && this.hoveredSlot.container instanceof Inventory) {
+                if (this.hoveredSlot.index != this.lastSwipedSlotId && this.hoveredSlot.hasItem()) {
+                    this.lastSwipedSlotId = this.hoveredSlot.index;
+                    net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.BUNDLE_INSERT, 1.0F));
+                    ClientPlayNetworking.send(new StorageActionPayload("QUICK_MOVE", ItemStack.EMPTY, this.hoveredSlot.index));
                     return true;
                 }
             }
 
-            int startX = (this.width - this.backgroundWidth) / 2;
-            int startY = (this.height - this.backgroundHeight) / 2;
+            int startX = (this.width - this.imageWidth) / 2;
+            int startY = (this.height - this.imageHeight) / 2;
             boolean overVirtualGrid = mouseX >= startX + 8 && mouseX < startX + 8 + (COLUMNS * 18) && mouseY >= startY + 36 && mouseY < startY + 36 + (ROWS * 18);
 
             if (overVirtualGrid) {
@@ -525,9 +525,9 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                     ItemStack hoveredItem = getHoveredVirtualItem(mouseX, mouseY);
                     if (hoveredItem != null) {
                         this.lastSwipedSlotId = gridId;
-                        net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.ITEM_BUNDLE_REMOVE_ONE, 1.0F));
-                        ClientPlayNetworking.send(new StorageActionPayload("SHIFT_EXTRACT", hoveredItem, hoveredItem.getMaxCount()));
-                        this.pauseSortingTime = net.minecraft.util.Util.getMeasuringTimeMs() + 1500;
+                        net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.BUNDLE_REMOVE_ONE, 1.0F));
+                        ClientPlayNetworking.send(new StorageActionPayload("SHIFT_EXTRACT", hoveredItem, hoveredItem.getMaxStackSize()));
+                        this.pauseSortingTime = net.minecraft.Util.getMillis() + 1500;
                         return true;
                     }
                 }
@@ -550,14 +550,14 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
 
         if (this.searchBox.isFocused()) {
             if (this.searchBox.keyPressed(keyCode, scanCode, modifiers)) return true;
-            if (this.client.options.inventoryKey.matchesKey(keyCode, scanCode)) return true;
+            if (this.minecraft.options.keyInventory.matches(keyCode, scanCode)) return true;
             return super.keyPressed(keyCode, scanCode, modifiers);
         }
 
         if (keyCode == GLFW.GLFW_KEY_S && Screen.hasControlDown()) {
             boolean fullDefrag = Screen.hasShiftDown();
             ClientPlayNetworking.send(new StorageActionPayload(fullDefrag ? "DEFRAGMENT_ALL" : "DEFRAGMENT_SHULKERS", ItemStack.EMPTY, 0));
-            net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+            net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
             return true;
         }
 
@@ -565,23 +565,23 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
             boolean shouldAutofocus = VanillaStorageInterface.CONFIG.autoFocusSearchBar && !VanillaStorageInterface.CONFIG.ipnHasPriorityOverAutoFocus;
 
             if (!shouldAutofocus) {
-                double scaledMouseX = this.client.mouse.getX() * (double) this.client.getWindow().getScaledWidth() / (double) this.client.getWindow().getWidth();
-                double scaledMouseY = this.client.mouse.getY() * (double) this.client.getWindow().getScaledHeight() / (double) this.client.getWindow().getHeight();
+                double scaledMouseX = this.minecraft.mouseHandler.xpos() * (double) this.minecraft.getWindow().getGuiScaledWidth() / (double) this.minecraft.getWindow().getScreenWidth();
+                double scaledMouseY = this.minecraft.mouseHandler.ypos() * (double) this.minecraft.getWindow().getGuiScaledHeight() / (double) this.minecraft.getWindow().getScreenHeight();
                 executeIpnAction(scaledMouseX, scaledMouseY);
                 return true;
             }
         }
 
-        if (this.client.options.dropKey.matchesKey(keyCode, scanCode)) {
+        if (this.minecraft.options.keyDrop.matches(keyCode, scanCode)) {
             this.interceptDropKeyChar = true; // Tell charTyped to ignore the resulting character
 
-            double scaledMouseX = this.client.mouse.getX() * (double) this.client.getWindow().getScaledWidth() / (double) this.client.getWindow().getWidth();
-            double scaledMouseY = this.client.mouse.getY() * (double) this.client.getWindow().getScaledHeight() / (double) this.client.getWindow().getHeight();
+            double scaledMouseX = this.minecraft.mouseHandler.xpos() * (double) this.minecraft.getWindow().getGuiScaledWidth() / (double) this.minecraft.getWindow().getScreenWidth();
+            double scaledMouseY = this.minecraft.mouseHandler.ypos() * (double) this.minecraft.getWindow().getGuiScaledHeight() / (double) this.minecraft.getWindow().getScreenHeight();
 
             ItemStack hoveredItem = getHoveredVirtualItem(scaledMouseX, scaledMouseY);
             if (hoveredItem != null) {
                 boolean dropEntireStack = Screen.hasControlDown();
-                ClientPlayNetworking.send(new StorageActionPayload("THROW", hoveredItem, dropEntireStack ? hoveredItem.getMaxCount() : 1));
+                ClientPlayNetworking.send(new StorageActionPayload("THROW", hoveredItem, dropEntireStack ? hoveredItem.getMaxStackSize() : 1));
                 return true;
             }
         }
@@ -590,23 +590,23 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     }
 
     private void executeIpnAction(double mouseX, double mouseY) {
-        long handle = this.client.getWindow().getHandle();
-        boolean hasMatchMod = net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.moveMatchMod) && IpnCompatWrapper.moveMatchMod != -1;
-        boolean hasAllMod = net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.moveAllMod) && IpnCompatWrapper.moveAllMod != -1;
-        boolean hasHotbarMod = net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.includeHotbarMod) && IpnCompatWrapper.includeHotbarMod != -1;
+        long handle = this.minecraft.getWindow().getWindow();
+        boolean hasMatchMod = com.mojang.blaze3d.platform.InputConstants.isKeyDown(handle, IpnCompatWrapper.moveMatchMod) && IpnCompatWrapper.moveMatchMod != -1;
+        boolean hasAllMod = com.mojang.blaze3d.platform.InputConstants.isKeyDown(handle, IpnCompatWrapper.moveAllMod) && IpnCompatWrapper.moveAllMod != -1;
+        boolean hasHotbarMod = com.mojang.blaze3d.platform.InputConstants.isKeyDown(handle, IpnCompatWrapper.includeHotbarMod) && IpnCompatWrapper.includeHotbarMod != -1;
 
         int hotbarFlag = hasHotbarMod ? 1 : 0;
 
-        int startX = (this.width - this.backgroundWidth) / 2;
-        int startY = (this.height - this.backgroundHeight) / 2;
+        int startX = (this.width - this.imageWidth) / 2;
+        int startY = (this.height - this.imageHeight) / 2;
         boolean isOverVirtual = mouseX >= startX + 8 && mouseX < startX + 8 + (COLUMNS * 18) && mouseY >= startY + 36 && mouseY < startY + 36 + (ROWS * 18);
-        boolean isOverPlayer = this.focusedSlot != null && this.focusedSlot.inventory instanceof PlayerInventory;
+        boolean isOverPlayer = this.hoveredSlot != null && this.hoveredSlot.container instanceof Inventory;
 
-        boolean isDirectedAtStorage = mouseX >= startX && mouseX < startX + this.backgroundWidth && mouseY >= startY && mouseY < startY + 140;
+        boolean isDirectedAtStorage = mouseX >= startX && mouseX < startX + this.imageWidth && mouseY >= startY && mouseY < startY + 140;
 
         if (hasMatchMod) {
-            if (isOverPlayer && this.focusedSlot.hasStack()) {
-                ClientPlayNetworking.send(new StorageActionPayload("IPN_MOVE_MATCHING_TO_STORAGE", this.focusedSlot.getStack(), hotbarFlag));
+            if (isOverPlayer && this.hoveredSlot.hasItem()) {
+                ClientPlayNetworking.send(new StorageActionPayload("IPN_MOVE_MATCHING_TO_STORAGE", this.hoveredSlot.getItem(), hotbarFlag));
             } else if (isOverVirtual) {
                 ItemStack hoveredItem = getHoveredVirtualItem(mouseX, mouseY);
                 if (hoveredItem != null) {
@@ -626,7 +626,7 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
                 ClientPlayNetworking.send(new StorageActionPayload("IPN_REFILL_STORAGE", ItemStack.EMPTY, hotbarFlag));
             }
         }
-        net.minecraft.client.MinecraftClient.getInstance().getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+        net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
     }
 
     @Override
@@ -639,11 +639,11 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
         }
 
         if (!this.searchBox.isFocused() && VanillaStorageInterface.CONFIG.ipnHasPriorityOverAutoFocus) {
-            long handle = this.client.getWindow().getHandle();
-            if ((IpnCompatWrapper.triggerKey != -1 && net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.triggerKey)) ||
-                    (IpnCompatWrapper.moveAllMod != -1 && net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.moveAllMod)) ||
-                    (IpnCompatWrapper.moveMatchMod != -1 && net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.moveMatchMod)) ||
-                    (IpnCompatWrapper.includeHotbarMod != -1 && net.minecraft.client.util.InputUtil.isKeyPressed(handle, IpnCompatWrapper.includeHotbarMod))) {
+            long handle = this.minecraft.getWindow().getWindow();
+            if ((IpnCompatWrapper.triggerKey != -1 && com.mojang.blaze3d.platform.InputConstants.isKeyDown(handle, IpnCompatWrapper.triggerKey)) ||
+                    (IpnCompatWrapper.moveAllMod != -1 && com.mojang.blaze3d.platform.InputConstants.isKeyDown(handle, IpnCompatWrapper.moveAllMod)) ||
+                    (IpnCompatWrapper.moveMatchMod != -1 && com.mojang.blaze3d.platform.InputConstants.isKeyDown(handle, IpnCompatWrapper.moveMatchMod)) ||
+                    (IpnCompatWrapper.includeHotbarMod != -1 && com.mojang.blaze3d.platform.InputConstants.isKeyDown(handle, IpnCompatWrapper.includeHotbarMod))) {
                 return false;
             }
         }
@@ -660,16 +660,16 @@ public class StorageInterfaceScreen extends HandledScreen<StorageInterfaceScreen
     }
 
     private boolean isHoveringOverInventories() {
-        if (this.client == null) return false;
+        if (this.minecraft == null) return false;
 
-        double mouseX = this.client.mouse.getX() * (double) this.client.getWindow().getScaledWidth() / (double) this.client.getWindow().getWidth();
-        double mouseY = this.client.mouse.getY() * (double) this.client.getWindow().getScaledHeight() / (double) this.client.getWindow().getHeight();
+        double mouseX = this.minecraft.mouseHandler.xpos() * (double) this.minecraft.getWindow().getGuiScaledWidth() / (double) this.minecraft.getWindow().getScreenWidth();
+        double mouseY = this.minecraft.mouseHandler.ypos() * (double) this.minecraft.getWindow().getGuiScaledHeight() / (double) this.minecraft.getWindow().getScreenHeight();
 
-        int startX = (this.width - this.backgroundWidth) / 2;
-        int startY = (this.height - this.backgroundHeight) / 2;
+        int startX = (this.width - this.imageWidth) / 2;
+        int startY = (this.height - this.imageHeight) / 2;
 
         boolean overVirtualGrid = mouseX >= startX + 8 && mouseX < startX + 8 + (COLUMNS * 18) && mouseY >= startY + 36 && mouseY < startY + 36 + (ROWS * 18);
 
-        return overVirtualGrid || this.focusedSlot != null;
+        return overVirtualGrid || this.hoveredSlot != null;
     }
 }

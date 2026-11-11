@@ -5,28 +5,28 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.gui.screen.ingame.HandledScreens;
+import net.minecraft.client.gui.screens.MenuScreens;
 import svemocan.VanillaStorageInterface;
 import svemocan.vanilla_storage_interface.gui.StorageInterfaceScreen;
 import svemocan.vanilla_storage_interface.network.StorageSyncPayload;
 
 public class VanillaStorageInterfaceClient implements ClientModInitializer {
-    public static net.minecraft.client.option.KeyBinding openVoidKey;
-    public static net.minecraft.client.option.KeyBinding openHoverKey;
-    public static net.minecraft.client.option.KeyBinding openHeldKey;
-    public static net.minecraft.client.option.KeyBinding openPlayerInvKey;
+    public static net.minecraft.client.KeyMapping openVoidKey;
+    public static net.minecraft.client.KeyMapping openHoverKey;
+    public static net.minecraft.client.KeyMapping openHeldKey;
+    public static net.minecraft.client.KeyMapping openPlayerInvKey;
 
     public static double savedMouseX = -1;
     public static double savedMouseY = -1;
 
     @Override
     public void onInitializeClient() {
-        HandledScreens.register(VanillaStorageInterface.STORAGE_INTERFACE_SCREEN_HANDLER, StorageInterfaceScreen::new);
+        MenuScreens.register(VanillaStorageInterface.STORAGE_INTERFACE_SCREEN_HANDLER, StorageInterfaceScreen::new);
 
-        openVoidKey = KeyBindingHelper.registerKeyBinding(new net.minecraft.client.option.KeyBinding("key.vanilla_storage.open_void", net.minecraft.client.util.InputUtil.Type.KEYSYM, org.lwjgl.glfw.GLFW.GLFW_KEY_V, "category.vanilla_storage.keys"));
-        openHoverKey = KeyBindingHelper.registerKeyBinding(new net.minecraft.client.option.KeyBinding("key.vanilla_storage.open_hover", net.minecraft.client.util.InputUtil.Type.KEYSYM, org.lwjgl.glfw.GLFW.GLFW_KEY_H, "category.vanilla_storage.keys"));
-        openHeldKey = KeyBindingHelper.registerKeyBinding(new net.minecraft.client.option.KeyBinding("key.vanilla_storage.open_held", net.minecraft.client.util.InputUtil.Type.KEYSYM, org.lwjgl.glfw.GLFW.GLFW_KEY_B, "category.vanilla_storage.keys"));
-        openPlayerInvKey = KeyBindingHelper.registerKeyBinding(new net.minecraft.client.option.KeyBinding("key.vanilla_storage.open_player_inv", net.minecraft.client.util.InputUtil.Type.KEYSYM, org.lwjgl.glfw.GLFW.GLFW_KEY_N, "category.vanilla_storage.keys"));
+        openVoidKey = KeyBindingHelper.registerKeyBinding(new net.minecraft.client.KeyMapping("key.vanilla_storage.open_void", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM, org.lwjgl.glfw.GLFW.GLFW_KEY_V, "category.vanilla_storage.keys"));
+        openHoverKey = KeyBindingHelper.registerKeyBinding(new net.minecraft.client.KeyMapping("key.vanilla_storage.open_hover", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM, org.lwjgl.glfw.GLFW.GLFW_KEY_H, "category.vanilla_storage.keys"));
+        openHeldKey = KeyBindingHelper.registerKeyBinding(new net.minecraft.client.KeyMapping("key.vanilla_storage.open_held", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM, org.lwjgl.glfw.GLFW.GLFW_KEY_B, "category.vanilla_storage.keys"));
+        openPlayerInvKey = KeyBindingHelper.registerKeyBinding(new net.minecraft.client.KeyMapping("key.vanilla_storage.open_player_inv", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM, org.lwjgl.glfw.GLFW.GLFW_KEY_N, "category.vanilla_storage.keys"));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null) return;
@@ -96,10 +96,10 @@ public class VanillaStorageInterfaceClient implements ClientModInitializer {
         });
 
         // Ensures custom interface blocks render transparency (glass parts) correctly
-        for (net.minecraft.block.Block block : VanillaStorageInterface.INTERFACE_BLOCKS.values()) {
+        for (net.minecraft.world.level.block.Block block : VanillaStorageInterface.INTERFACE_BLOCKS.values()) {
             net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(
                     block,
-                    net.minecraft.client.render.RenderLayer.getTranslucent()
+                    net.minecraft.client.renderer.RenderType.translucent()
             );
         }
     }
