@@ -10,6 +10,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
@@ -56,8 +57,8 @@ public class StorageAggregator {
 
                 if (container != null) {
                     int occupiedSlots = 0;
-                    for (ItemStack innerStack : container.nonEmptyItems()) {
-                        virtualInventory.addItem(innerStack);
+                    for (ItemStackTemplate template : container.nonEmptyItems()) {
+                        virtualInventory.addItem(template.create());
                         occupiedSlots++;
                     }
                     // Keep track of internal space available for future item injections/sorting logic
@@ -99,11 +100,11 @@ public class StorageAggregator {
             if (stack.isEmpty()) continue;
 
             if (isShulkerBox(stack.getItem())) {
-                net.minecraft.world.item.component.ItemContainerContents container = stack.get(net.minecraft.core.component.DataComponents.CONTAINER);
+                ItemContainerContents container = stack.get(DataComponents.CONTAINER);
                 if (container != null) {
                     int occupied = 0;
-                    for (ItemStack inner : container.nonEmptyItems()) {
-                        virtualInventory.addItem(inner);
+                    for (ItemStackTemplate template : container.nonEmptyItems()) {
+                        virtualInventory.addItem(template.create());
                         occupied++;
                     }
                     virtualInventory.emptyShulkerSlots += (27 - occupied);

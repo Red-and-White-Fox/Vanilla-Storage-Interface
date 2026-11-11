@@ -1,13 +1,14 @@
 package svemocan;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
+import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.item.BlockItem;
@@ -82,7 +83,7 @@ public class VanillaStorageInterface implements ModInitializer {
         // to minimize boilerplate registration footprints.
         for (String wood : MATERIAL_TYPES) {
             Item frameItem = new Item(new Item.Properties());
-            Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(MOD_ID, wood + "_storage_frame"), frameItem);
+            Registry.register(BuiltInRegistries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, wood + "_storage_frame"), frameItem);
 
             Block interfaceBlock = new StorageInterfaceBlock(
                     BlockBehaviour.Properties.of()
@@ -91,20 +92,20 @@ public class VanillaStorageInterface implements ModInitializer {
                             .noOcclusion()
                             .lightLevel(state -> state.getValue(StorageInterfaceBlock.ILLUMINATED) ? 10 : 0)
             );
-            Registry.register(BuiltInRegistries.BLOCK, ResourceLocation.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface"), interfaceBlock);
-            Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface"), new BlockItem(interfaceBlock, new Item.Properties()));
+            Registry.register(BuiltInRegistries.BLOCK, Identifier.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface"), interfaceBlock);
+            Registry.register(BuiltInRegistries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface"), new BlockItem(interfaceBlock, new Item.Properties()));
 
             INTERFACE_BLOCKS.put(wood, interfaceBlock);
         }
 
-        VANILLA_STORAGE_GROUP = Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, ResourceLocation.fromNamespaceAndPath(MOD_ID, "main"),
-                FabricItemGroup.builder()
-                        .icon(() -> new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(MOD_ID, "oak_storage_interface"))))
+        VANILLA_STORAGE_GROUP = Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, Identifier.fromNamespaceAndPath(MOD_ID, "main"),
+                FabricCreativeModeTab.builder()
+                        .icon(() -> new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath(MOD_ID, "oak_storage_interface"))))
                         .title(Component.translatable("itemGroup.vanilla_storage_interface.main"))
                         .displayItems((context, entries) -> {
                             for (String wood : MATERIAL_TYPES) {
-                                entries.accept(BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(MOD_ID, wood + "_storage_frame")));
-                                entries.accept(BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface")));
+                                entries.accept(BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath(MOD_ID, wood + "_storage_frame")));
+                                entries.accept(BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath(MOD_ID, wood + "_storage_interface")));
                             }
                         })
                         .build()
@@ -115,28 +116,28 @@ public class VanillaStorageInterface implements ModInitializer {
         Block[] blockArray = INTERFACE_BLOCKS.values().toArray(new Block[0]);
         STORAGE_INTERFACE_BLOCK_ENTITY = Registry.register(
                 BuiltInRegistries.BLOCK_ENTITY_TYPE,
-                ResourceLocation.fromNamespaceAndPath(MOD_ID, "storage_interface"),
-                BlockEntityType.Builder.of(StorageInterfaceBlockEntity::new, blockArray).build()
+                Identifier.fromNamespaceAndPath(MOD_ID, "storage_interface"),
+                FabricBlockEntityTypeBuilder.<StorageInterfaceBlockEntity>create(StorageInterfaceBlockEntity::new, blockArray).build()
         );
 
         STORAGE_INTERFACE_SCREEN_HANDLER = Registry.register(
-                BuiltInRegistries.MENU, ResourceLocation.fromNamespaceAndPath(MOD_ID, "storage_interface"),
+                BuiltInRegistries.MENU, Identifier.fromNamespaceAndPath(MOD_ID, "storage_interface"),
                 new net.minecraft.world.inventory.MenuType<>(svemocan.vanilla_storage_interface.gui.StorageInterfaceScreenHandler::new, net.minecraft.world.flag.FeatureFlagSet.of())
         );
 
-        // Modern Fabric Networking Framework (1.20.5+): Network payloads require metadata type split registrations.
+        // Modern Fabric Networking Framework: Network payloads require metadata type split registrations.
         // Codecs must be declared on PayloadTypeRegistry prior to attaching receiver endpoints via ServerPlayNetworking.
-        PayloadTypeRegistry.playC2S().register(OpenTerminalPayload.ID, OpenTerminalPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(OpenRawUIPayload.ID, OpenRawUIPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(OpenTerminalPayload.ID, OpenTerminalPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(OpenRawUIPayload.ID, OpenRawUIPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(OpenTerminalPayload.ID, (payload, context) -> {
             context.server().execute(() -> {
                 net.minecraft.server.level.ServerPlayer player = context.player();
 
                 if (payload.mode() == 1 && CONFIG.enableVoidTerminal) {
-                    player.serverLevel().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ENDER_CHEST_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.serverLevel().random.nextFloat() * 0.1F + 0.9F);
+                    player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ENDER_CHEST_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.level().getRandom().nextFloat() * 0.1F + 0.9F);
                     player.openMenu(new SimpleMenuProvider((s, i, p) -> new StorageInterfaceScreenHandler(s, i, p.blockPosition(), 1, -1), Component.literal("Void Terminal")));
-                    StorageAggregator.VirtualInventory vi = StorageAggregator.buildFromInventory(player.serverLevel(), player.getEnderChestInventory());
+                    StorageAggregator.VirtualInventory vi = StorageAggregator.buildFromInventory(player.level(), player.getEnderChestInventory());
                     ServerPlayNetworking.send(player, new StorageSyncPayload(vi.items, vi.emptyShulkerSlots, player.blockPosition(), true));
                 }
                 else if (payload.mode() == 2 && CONFIG.enableBoxTerminal) {
@@ -153,16 +154,16 @@ public class VanillaStorageInterface implements ModInitializer {
                                 player.getInventory().setItem(emptySlot, leftover);
                                 targetShulker = singleBox;
                             } else {
-                                player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cCannot open stacked Shulker Box. Your inventory is full!"), true);
+                                player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cCannot open stacked Shulker Box. Your inventory is full!"), true);
                                 return;
                             }
                         }
 
                         final net.minecraft.world.item.ItemStack finalShulker = targetShulker; // CRITICAL FIX: Captures the effectively final state for the lambda
 
-                        player.serverLevel().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SHULKER_BOX_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.serverLevel().random.nextFloat() * 0.1F + 0.9F);
+                        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SHULKER_BOX_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.level().getRandom().nextFloat() * 0.1F + 0.9F);
                         player.openMenu(new SimpleMenuProvider((s, i, p) -> new StorageInterfaceScreenHandler(s, i, p.blockPosition(), 2, targetIndex), finalShulker.getHoverName()));
-                        StorageAggregator.VirtualInventory vi = StorageAggregator.buildFromInventory(player.serverLevel(), new StorageMutator.ShulkerItemInventory(finalShulker));
+                        StorageAggregator.VirtualInventory vi = StorageAggregator.buildFromInventory(player.level(), new StorageMutator.ShulkerItemInventory(finalShulker));
                         ServerPlayNetworking.send(player, new StorageSyncPayload(vi.items, vi.emptyShulkerSlots, player.blockPosition(), true));
                     }
                 }
@@ -179,7 +180,7 @@ public class VanillaStorageInterface implements ModInitializer {
                 net.minecraft.server.level.ServerPlayer player = context.player();
 
                 if (payload.mode() == 1 && CONFIG.enableVoidRaw) {
-                    player.serverLevel().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ENDER_CHEST_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.serverLevel().random.nextFloat() * 0.1F + 0.9F);
+                    player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ENDER_CHEST_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.level().getRandom().nextFloat() * 0.1F + 0.9F);
                     player.openMenu(new SimpleMenuProvider((syncId, inv, p) ->
                             net.minecraft.world.inventory.ChestMenu.threeRows(syncId, inv, player.getEnderChestInventory()), Component.literal("Raw Void Storage")));
                 }
@@ -195,14 +196,14 @@ public class VanillaStorageInterface implements ModInitializer {
                                 player.getInventory().setItem(emptySlot, leftover);
                                 targetShulker = singleBox;
                             } else {
-                                player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cCannot open stacked Shulker Box. Your inventory is full!"), true);
+                                player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§cCannot open stacked Shulker Box. Your inventory is full!"), true);
                                 return;
                             }
                         }
 
                         final net.minecraft.world.item.ItemStack finalShulker = targetShulker;
 
-                        player.serverLevel().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SHULKER_BOX_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.serverLevel().random.nextFloat() * 0.1F + 0.9F);
+                        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SHULKER_BOX_OPEN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5F, player.level().getRandom().nextFloat() * 0.1F + 0.9F);
                         player.openMenu(new SimpleMenuProvider((syncId, inv, p) ->
                                 new net.minecraft.world.inventory.ShulkerBoxMenu(syncId, inv, new StorageMutator.ShulkerItemInventory(finalShulker)), finalShulker.getHoverName()));
                     }
@@ -210,8 +211,8 @@ public class VanillaStorageInterface implements ModInitializer {
             });
         });
 
-        PayloadTypeRegistry.playS2C().register(StorageSyncPayload.ID, StorageSyncPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(StorageActionPayload.ID, StorageActionPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(StorageSyncPayload.ID, StorageSyncPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(StorageActionPayload.ID, StorageActionPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(StorageActionPayload.ID, (payload, context) -> {
             context.server().execute(() -> StorageMutator.handleAction(context.player(), payload));

@@ -1,6 +1,8 @@
 package svemocan.vanilla_storage_interface.gui;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -9,32 +11,36 @@ import net.minecraft.world.item.ItemStack;
 import svemocan.VanillaStorageInterface;
 
 public class StorageInterfaceScreenHandler extends AbstractContainerMenu {
-
+    private final Container inventory;
     private final BlockPos interfacePos;
-    private final int terminalMode;
+    private final Player player;
+    private final int terminalMode; // 0 = Normal Block, 1 = Void Terminal (Ender Chest), 2 = Box Terminal (Shulker Box), 3 = Player Inventory Terminal
     private final int shulkerSlot;
-    private final net.minecraft.world.entity.player.Player player;
     private int updateTimer = 0;
     private int lastHash = -1;
 
+    // Client-side initialization constructor
     public StorageInterfaceScreenHandler(int syncId, Inventory playerInventory) {
-        this(syncId, playerInventory, net.minecraft.core.BlockPos.ZERO, 0, -1);
+        this(syncId, playerInventory, BlockPos.ZERO, 0, -1);
     }
 
+    // Server-side initialization constructor
     public StorageInterfaceScreenHandler(int syncId, Inventory playerInventory, BlockPos pos) {
         this(syncId, playerInventory, pos, 0, -1);
     }
 
-    public StorageInterfaceScreenHandler(int syncId, Inventory playerInventory, BlockPos pos, int mode, int shulkerSlot) {
+    public StorageInterfaceScreenHandler(int syncId, Inventory playerInventory, BlockPos pos, int terminalMode, int shulkerSlot) {
         super(VanillaStorageInterface.STORAGE_INTERFACE_SCREEN_HANDLER, syncId);
+        this.inventory = new SimpleContainer(0);
         this.interfacePos = pos;
-        this.terminalMode = mode;
-        this.shulkerSlot = shulkerSlot;
         this.player = playerInventory.player;
+        this.terminalMode = terminalMode;
+        this.shulkerSlot = shulkerSlot;
 
+        // Player Inventory layout (Rows: 3, Columns: 9)
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
-                int slotIndex = col + row * 9 + 9;
+                int slotIndex = col + (row + 1) * 9;
                 if (this.terminalMode == 2 && slotIndex == this.shulkerSlot) {
                     this.addSlot(new Slot(playerInventory, slotIndex, 8 + col * 18, 140 + row * 18) {
                         @Override public boolean mayPickup(Player playerEntity) { return false; }
@@ -45,6 +51,8 @@ public class StorageInterfaceScreenHandler extends AbstractContainerMenu {
                 }
             }
         }
+
+        // Hotbar layout (Columns: 9)
         for (int col = 0; col < 9; ++col) {
             int slotIndex = col;
             if (this.terminalMode == 2 && slotIndex == this.shulkerSlot) {
@@ -66,10 +74,10 @@ public class StorageInterfaceScreenHandler extends AbstractContainerMenu {
     public void broadcastChanges() {
         super.broadcastChanges();
 
-        if (!this.player.level().isClientSide) {
+        if (!this.player.level().isClientSide()) {
             if (this.updateTimer++ % 10 == 0) {
                 net.minecraft.server.level.ServerPlayer serverPlayer = (net.minecraft.server.level.ServerPlayer) this.player;
-                net.minecraft.world.level.Level world = serverPlayer.serverLevel();
+                net.minecraft.world.level.Level world = serverPlayer.level();
                 svemocan.vanilla_storage_interface.StorageAggregator.VirtualInventory vi = null;
                 boolean isVirtual = (this.terminalMode != 0);
 
@@ -117,7 +125,7 @@ public class StorageInterfaceScreenHandler extends AbstractContainerMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int slotIndex) {
-        if (player.level().isClientSide) return ItemStack.EMPTY;
+        if (player.level().isClientSide()) return ItemStack.EMPTY;
 
         Slot slot = this.slots.get(slotIndex);
         if (slot != null && slot.hasItem()) {
@@ -162,7 +170,7 @@ public class StorageInterfaceScreenHandler extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
-        if (!player.level().isClientSide) {
+        if (!player.level().isClientSide()) {
             net.minecraft.world.level.Level world = player.level();
 
             if (this.terminalMode == 1) {
@@ -181,6 +189,10 @@ public class StorageInterfaceScreenHandler extends AbstractContainerMenu {
                         world.playSound(null, this.interfacePos, net.minecraft.sounds.SoundEvents.CHEST_CLOSE, net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.0f);
                     } else if (targetBlock instanceof net.minecraft.world.level.block.BarrelBlock) {
                         world.playSound(null, this.interfacePos, net.minecraft.sounds.SoundEvents.BARREL_CLOSE, net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.0f);
+                    } else if (targetBlock instanceof net.minecraft.world.level.block.EnderChestBlock) {
+                        world.playSound(null, this.interfacePos, net.minecraft.sounds.SoundEvents.ENDER_CHEST_CLOSE, net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.0f);
+                    } else if (targetBlock instanceof net.minecraft.world.level.block.ShulkerBoxBlock) {
+                        world.playSound(null, this.interfacePos, net.minecraft.sounds.SoundEvents.SHULKER_BOX_CLOSE, net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.0f);
                     }
                 }
             }

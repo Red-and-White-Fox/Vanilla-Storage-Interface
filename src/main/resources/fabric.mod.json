@@ -37,13 +37,13 @@
     }
   ],
   "depends": {
-    "fabricloader": ">=0.16.14",
-    "minecraft": "~1.21.1",
-    "java": ">=21",
+    "fabricloader": ">=0.20.1",
+    "minecraft": "~26.3",
+    "java": ">=25",
     "fabric-api": "*",
-    "cloth-config": ">=15.0.0"
+    "cloth-config": ">=26.3.0"
   },
   "suggests": {
-    "modmenu": ">=11.0.0"
+    "modmenu": ">=21.0.0"
   }
 }

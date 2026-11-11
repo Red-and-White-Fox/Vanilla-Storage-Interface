@@ -5,11 +5,11 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public record StorageSyncPayload(List<VirtualItem> items, int emptyShulkerSlots, net.minecraft.core.BlockPos pos, boolean isVirtual) implements CustomPacketPayload {
 
-    public static final CustomPacketPayload.Type<StorageSyncPayload> ID = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("vanilla_storage_interface", "storage_sync"));
+    public static final CustomPacketPayload.Type<StorageSyncPayload> ID = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("vanilla_storage_interface", "storage_sync"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, StorageSyncPayload> CODEC = StreamCodec.composite(
             VirtualItem.CODEC.apply(ByteBufCodecs.list()), StorageSyncPayload::items,

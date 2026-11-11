@@ -2,6 +2,7 @@ package svemocan.client.mixin;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -20,13 +21,13 @@ public abstract class HandledScreenMixin {
     @Shadow @Nullable protected Slot hoveredSlot;
 
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-    private void onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
-        if (VanillaStorageInterfaceClient.openHoverKey.matches(keyCode, scanCode)) {
+    private void onKeyPressed(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+        if (VanillaStorageInterfaceClient.openHoverKey.matches(event)) {
 
             if (this.hoveredSlot != null && this.hoveredSlot.hasItem()) {
                 ItemStack hoveredItem = this.hoveredSlot.getItem();
 
-                boolean isShift = net.minecraft.client.gui.screens.Screen.hasShiftDown();
+                boolean isShift = event.hasShiftDown();
                 boolean invert = VanillaStorageInterface.CONFIG.invertShiftModifiers;
 
                 // Determines which UI to open. If invert config is true, pressing the key WITHOUT shift triggers RawUI instead.

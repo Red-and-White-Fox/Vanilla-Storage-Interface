@@ -1,6 +1,5 @@
 package svemocan.vanilla_storage_interface;
 
-import net.minecraft.block.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionResult;
@@ -16,7 +15,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -24,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 import svemocan.VanillaStorageInterface;
 
 public class StorageInterfaceBlock extends Block implements EntityBlock {
-    public static final DirectionProperty FACING = BlockStateProperties.FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
     public static final net.minecraft.world.level.block.state.properties.BooleanProperty ON_CHEST = net.minecraft.world.level.block.state.properties.BooleanProperty.create("on_chest");
     public static final net.minecraft.world.level.block.state.properties.BooleanProperty ILLUMINATED = net.minecraft.world.level.block.state.properties.BooleanProperty.create("illuminated");
 
@@ -68,17 +67,15 @@ public class StorageInterfaceBlock extends Block implements EntityBlock {
 
     @Override
     public BlockState playerWillDestroy(Level world, BlockPos pos, BlockState state, Player player) {
-        if (!world.isClientSide && !player.isCreative()) {
+        if (!world.isClientSide() && !player.isCreative()) {
             net.minecraft.world.Containers.dropItemStack(world, pos.getX(), pos.getY(), pos.getZ(), new net.minecraft.world.item.ItemStack(this.asItem()));
         }
         return super.playerWillDestroy(world, pos, state, player);
     }
 
     @Override
-    public void wasExploded(Level world, BlockPos pos, net.minecraft.world.level.Explosion explosion) {
-        if (!world.isClientSide) {
-            net.minecraft.world.Containers.dropItemStack(world, pos.getX(), pos.getY(), pos.getZ(), new net.minecraft.world.item.ItemStack(this.asItem()));
-        }
+    public void wasExploded(net.minecraft.server.level.ServerLevel world, BlockPos pos, net.minecraft.world.level.Explosion explosion) {
+        net.minecraft.world.Containers.dropItemStack(world, pos.getX(), pos.getY(), pos.getZ(), new net.minecraft.world.item.ItemStack(this.asItem()));
         super.wasExploded(world, pos, explosion);
     }
 
@@ -98,20 +95,20 @@ public class StorageInterfaceBlock extends Block implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
 
-        if (!world.isClientSide) {
+        if (!world.isClientSide()) {
             net.minecraft.core.Direction facing = state.getValue(FACING);
             net.minecraft.core.BlockPos attachedPos = pos.relative(facing.getOpposite());
             net.minecraft.world.level.block.Block attachedBlock = world.getBlockState(attachedPos).getBlock();
 
             // Match sound design contextually to mimic standard container handling upon activation
             if (attachedBlock instanceof net.minecraft.world.level.block.ChestBlock) {
-                world.playSound(null, pos, net.minecraft.sounds.SoundEvents.CHEST_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 0.5F, world.random.nextFloat() * 0.1F + 0.9F);
+                world.playSound(null, pos, net.minecraft.sounds.SoundEvents.CHEST_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 0.5F, world.getRandom().nextFloat() * 0.1F + 0.9F);
             } else if (attachedBlock instanceof net.minecraft.world.level.block.BarrelBlock) {
-                world.playSound(null, pos, net.minecraft.sounds.SoundEvents.BARREL_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 0.5F, world.random.nextFloat() * 0.1F + 0.9F);
+                world.playSound(null, pos, net.minecraft.sounds.SoundEvents.BARREL_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 0.5F, world.getRandom().nextFloat() * 0.1F + 0.9F);
             } else if (attachedBlock instanceof net.minecraft.world.level.block.EnderChestBlock) {
-                world.playSound(null, pos, net.minecraft.sounds.SoundEvents.ENDER_CHEST_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 0.5F, world.random.nextFloat() * 0.1F + 0.9F);
+                world.playSound(null, pos, net.minecraft.sounds.SoundEvents.ENDER_CHEST_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 0.5F, world.getRandom().nextFloat() * 0.1F + 0.9F);
             } else if (attachedBlock instanceof net.minecraft.world.level.block.ShulkerBoxBlock) {
-                world.playSound(null, pos, net.minecraft.sounds.SoundEvents.SHULKER_BOX_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 0.5F, world.random.nextFloat() * 0.1F + 0.9F);
+                world.playSound(null, pos, net.minecraft.sounds.SoundEvents.SHULKER_BOX_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 0.5F, world.getRandom().nextFloat() * 0.1F + 0.9F);
             }
 
             player.openMenu(new net.minecraft.world.SimpleMenuProvider(
@@ -153,13 +150,13 @@ public class StorageInterfaceBlock extends Block implements EntityBlock {
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, net.minecraft.world.level.LevelAccessor world, BlockPos pos, BlockPos neighborPos) {
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader world, net.minecraft.world.level.ScheduledTickAccess tickAccess, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, net.minecraft.util.RandomSource random) {
         // Listens to shifts behind its facing surface; triggers recalculations if the container type drops or transforms
         if (direction == state.getValue(FACING).getOpposite()) {
             boolean isChest = neighborState.getBlock() instanceof net.minecraft.world.level.block.ChestBlock || neighborState.getBlock() instanceof net.minecraft.world.level.block.EnderChestBlock;
             return state.setValue(ON_CHEST, isChest);
         }
-        return super.updateShape(state, direction, neighborState, world, pos, neighborPos);
+        return super.updateShape(state, world, tickAccess, pos, direction, neighborPos, neighborState, random);
     }
 
     @Nullable

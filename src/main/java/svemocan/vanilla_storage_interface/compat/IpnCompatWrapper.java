@@ -1,25 +1,24 @@
 package svemocan.vanilla_storage_interface.compat;
 
 import net.fabricmc.loader.api.FabricLoader;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class IpnCompatWrapper {
-    public static int triggerKey = GLFW.GLFW_KEY_SPACE;
+    public static int triggerKey = 32; // GLFW_KEY_SPACE
     public static int triggerMouse = -1;
-    public static int moveAllMod = GLFW.GLFW_KEY_LEFT_SHIFT;
-    public static int moveMatchMod = GLFW.GLFW_KEY_LEFT_CONTROL;
-    public static int includeHotbarMod = GLFW.GLFW_KEY_LEFT_ALT;
+    public static int moveAllMod = 340; // GLFW_KEY_LEFT_SHIFT
+    public static int moveMatchMod = 341; // GLFW_KEY_LEFT_CONTROL
+    public static int includeHotbarMod = 342; // GLFW_KEY_LEFT_ALT
 
     public static void updateKeys() {
         // 1. Set the standard IPN Defaults initially
-        triggerKey = GLFW.GLFW_KEY_SPACE;
+        triggerKey = 32;
         triggerMouse = -1;
-        moveAllMod = GLFW.GLFW_KEY_LEFT_SHIFT;
-        moveMatchMod = GLFW.GLFW_KEY_LEFT_CONTROL;
-        includeHotbarMod = GLFW.GLFW_KEY_LEFT_ALT;
+        moveAllMod = 340;
+        moveMatchMod = 341;
+        includeHotbarMod = 342;
 
         if (!FabricLoader.getInstance().isModLoaded("inventoryprofilesnext")) {
             return; // Soft Dependency: Ignore completely if IPN is not installed
@@ -123,18 +122,18 @@ public class IpnCompatWrapper {
         key = key.trim().toUpperCase();
         if (key.startsWith("BUTTON_")) return -1;
         return switch (key) {
-            case "LEFT_ALT" -> GLFW.GLFW_KEY_LEFT_ALT;
-            case "RIGHT_ALT" -> GLFW.GLFW_KEY_RIGHT_ALT;
-            case "LEFT_CONTROL" -> GLFW.GLFW_KEY_LEFT_CONTROL;
-            case "RIGHT_CONTROL" -> GLFW.GLFW_KEY_RIGHT_CONTROL;
-            case "LEFT_SHIFT" -> GLFW.GLFW_KEY_LEFT_SHIFT;
-            case "RIGHT_SHIFT" -> GLFW.GLFW_KEY_RIGHT_SHIFT;
-            case "CAPS_LOCK" -> GLFW.GLFW_KEY_CAPS_LOCK;
-            case "SPACE" -> GLFW.GLFW_KEY_SPACE;
+            case "LEFT_ALT" -> 342; // GLFW_KEY_LEFT_ALT
+            case "RIGHT_ALT" -> 346; // GLFW_KEY_RIGHT_ALT
+            case "LEFT_CONTROL" -> 341; // GLFW_KEY_LEFT_CONTROL
+            case "RIGHT_CONTROL" -> 345; // GLFW_KEY_RIGHT_CONTROL
+            case "LEFT_SHIFT" -> 340; // GLFW_KEY_LEFT_SHIFT
+            case "RIGHT_SHIFT" -> 344; // GLFW_KEY_RIGHT_SHIFT
+            case "CAPS_LOCK" -> 280; // GLFW_KEY_CAPS_LOCK
+            case "SPACE" -> 32; // GLFW_KEY_SPACE
             case "NONE" -> -1;
             default -> {
                 if (key.length() == 1 && key.charAt(0) >= 'A' && key.charAt(0) <= 'Z') {
-                    yield GLFW.GLFW_KEY_A + (key.charAt(0) - 'A');
+                    yield 65 + (key.charAt(0) - 'A'); // GLFW_KEY_A
                 }
                 yield -1;
             }
